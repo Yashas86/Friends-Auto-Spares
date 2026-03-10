@@ -124,11 +124,10 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
-});
+
+
+// reverse geocode route
 app.get("/reverse-geocode", async (req, res) => {
   const { lat, lon } = req.query;
 
@@ -154,5 +153,11 @@ app.get("/reverse-geocode", async (req, res) => {
     console.error("Reverse geocode failed:", err);
     res.status(500).json({ error: "Failed to fetch address" });
   }
+});
+
+const PORT = process.env.PORT || 4000;
+
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
 });
 
