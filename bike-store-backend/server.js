@@ -135,12 +135,12 @@ app.get("/reverse-geocode", async (req, res) => {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "friends-auto-spares",
-        "Accept": "application/json",
-      },
-    });
+ const response = await fetch(url, {
+  headers: {
+    "User-Agent": "FriendsAutoSparesApp/1.0 (contact@yashas.com)",
+    "Accept": "application/json"
+  }
+});
 
     const data = await response.json();
     res.json(data);
