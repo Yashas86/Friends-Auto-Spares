@@ -137,31 +137,22 @@ app.get("/reverse-geocode", async (req, res) => {
   }
 
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "User-Agent": "FriendsAutoSparesApp/1.0 (contact@yashas.com)",
-        "Accept": "application/json"
-      },
-      timeout: 10000
+    const response = await fetch(url);
+    const data = await response.json();
+
+    res.json({
+      display_name: `${data.locality || ""}, ${data.principalSubdivision || ""}, ${data.countryName || ""}`,
+      address: {
+        city: data.city || data.locality || "",
+        postcode: data.postcode || ""
+      }
     });
-
-    const text = await response.text();
-
-    if (!response.ok) {
-      console.error("OpenStreetMap error:", response.status, text);
-      return res.status(500).json({ error: "OpenStreetMap request failed" });
-    }
-
-    const data = JSON.parse(text);
-    res.json(data);
 
   } catch (err) {
     console.error("Reverse geocode failed:", err);
     res.status(500).json({ error: "Failed to fetch address" });
   }
 });
-
 
