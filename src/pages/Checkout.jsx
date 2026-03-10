@@ -50,7 +50,7 @@ function DraggableMarker({ pos, setPos, setAddress, setCity, setPincode }) {
 
 async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
   try {
-const res = await fetch(`http://localhost:4000/reverse-geocode?lat=${lat}&lon=${lng}`)
+const res = await fetch(`https://friends-auto-backend.onrender.com/reverse-geocode?lat=${lat}&lon=${lng}`)
 
     const data = await res.json();
 
@@ -327,7 +327,7 @@ const payWithRazorpay = async () => {
 
   const [lat,lon] = pos;
 
- const res = await fetch(`http://localhost:4000/create-order`, {
+ const res = await fetch("https://friends-auto-backend.onrender.com/create-order", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ amount: totalAmount }),

@@ -56,7 +56,7 @@ export default function Admin({ products, setProducts, orders, setOrders, fetchP
 
   // ---------------- LOGIN ----------------
   const login = async () => {
-    const res = await fetch("http://localhost:4000/admin/login", {
+    const res = await fetch("https://friends-auto-backend.onrender.com/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),

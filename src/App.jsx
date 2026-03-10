@@ -182,7 +182,7 @@ const [products, setProducts] = useState(() => {
 
   const fetchOrders = async () => {
     const token = localStorage.getItem("adminToken");
-    const res = await fetch("http://localhost:4000/orders", {
+    const res = await fetch("https://friends-auto-backend.onrender.com/orders", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
@@ -191,7 +191,7 @@ const [products, setProducts] = useState(() => {
 
   const updateOrderStatus = async (id, status) => {
     const token = localStorage.getItem("adminToken");
-    await fetch(`http://localhost:4000/orders/${id}`, {
+    await fetch(`https://friends-auto-backend.onrender.com/orders/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
