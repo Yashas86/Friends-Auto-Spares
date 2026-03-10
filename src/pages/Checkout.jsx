@@ -50,24 +50,29 @@ function DraggableMarker({ pos, setPos, setAddress, setCity, setPincode }) {
 
 async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
   try {
-const res = await fetch(`https://friends-auto-backend.onrender.com/reverse-geocode?lat=${lat}&lon=${lng}`)
+    const res = await fetch(
+      `https://geocode.maps.co/reverse?lat=${lat}&lon=${lng}`
+    );
 
     const data = await res.json();
 
     const fullAddress = data.display_name || "";
-    const cityName =
+
+    const city =
       data.address?.city ||
       data.address?.town ||
       data.address?.village ||
       "";
-    const pin = data.address?.postcode || "";
+
+    const pincode = data.address?.postcode || "";
 
     setAddress(fullAddress);
-    setCity(cityName);
-    setPincode(pin);
+    setCity(city);
+    setPincode(pincode);
+
   } catch (err) {
-    alert("Could not fetch address");
     console.error(err);
+    alert("Failed to fetch address");
   }
 }
 
