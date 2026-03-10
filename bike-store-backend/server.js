@@ -142,12 +142,12 @@ app.get("/reverse-geocode", async (req, res) => {
     const data = await response.json();
 
     res.json({
-      display_name: `${data.locality || ""}, ${data.principalSubdivision || ""}, ${data.countryName || ""}`,
-      address: {
-        city: data.city || data.locality || "",
-        postcode: data.postcode || ""
-      }
-    });
+  display_name: `${data.locality || data.city || ""}, ${data.principalSubdivision || ""}, ${data.countryName || ""}`,
+  address: {
+    city: data.city || data.locality || data.principalSubdivision || "",
+    postcode: data.postcode || data.postalCode || ""
+  }
+});
 
   } catch (err) {
     console.error("Reverse geocode failed:", err);
