@@ -236,7 +236,7 @@ const placeOrderCOD = async () => {
     createdAt: new Date().toISOString(),
   };
 
-await fetch(`http://localhost:4000/orders`, {
+await fetch("https://friends-auto-backend.onrender.com/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(orderPayload),
@@ -358,7 +358,7 @@ const order = await res.json();
         createdAt: new Date().toISOString(),
       };
 
-     await fetch(`http://localhost:4000/orders`, {
+     await fetch("https://friends-auto-backend.onrender.com/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderpayload),

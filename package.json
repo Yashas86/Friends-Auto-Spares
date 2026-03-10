@@ -2,7 +2,7 @@
   "name": "bike-store",
   "version": "0.1.0",
   "private": true,
-    "proxy": "http://localhost:4000",
+   "proxy": "https://friends-auto-backend.onrender.com",
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.97.0",
