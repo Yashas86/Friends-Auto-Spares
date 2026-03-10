@@ -141,23 +141,31 @@ app.get("/reverse-geocode", async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
+    const city =
+      data.city ||
+      data.locality ||
+      data.principalSubdivision ||
+      "";
+
+    const postcode =
+      data.postcode ||
+      data.postalCode ||
+      "";
+
+    const display =
+      `${city}, ${data.principalSubdivision || ""}, ${data.countryName || ""}`;
+
     res.json({
-  display_name: `${data.locality || data.city || ""}, ${data.principalSubdivision || ""}, ${data.countryName || ""}`,
-  address: {
-    city: data.city || data.locality || data.principalSubdivision || "",
-    postcode: data.postcode || data.postalCode || ""
-  }
-});
+      display_name: display,
+      address: {
+        city: city,
+        postcode: postcode
+      }
+    });
 
   } catch (err) {
     console.error("Reverse geocode failed:", err);
     res.status(500).json({ error: "Failed to fetch address" });
   }
-});
-
-const PORT = process.env.PORT || 4000;
-
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
 });
 
