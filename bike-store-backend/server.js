@@ -136,24 +136,23 @@ app.get("/reverse-geocode", async (req, res) => {
   }
 
   try {
-    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+    const url = `https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
     const city =
-      data.city ||
-      data.locality ||
-      data.principalSubdivision ||
+      data.address?.city ||
+      data.address?.town ||
+      data.address?.village ||
       "";
 
     const postcode =
-      data.postcode ||
-      data.postalCode ||
+      data.address?.postcode ||
       "";
 
     const display =
-      `${city}, ${data.principalSubdivision || ""}, ${data.countryName || ""}`;
+      data.display_name || "";
 
     res.json({
       display_name: display,
