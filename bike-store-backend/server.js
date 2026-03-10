@@ -135,17 +135,25 @@ app.get("/reverse-geocode", async (req, res) => {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
 
- const response = await fetch(url, {
-  headers: {
-    "User-Agent": "FriendsAutoSparesApp/1.0 (contact@yashas.com)",
-    "Accept": "application/json"
-  }
-});
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "FriendsAutoSparesApp/1.0",
+        "Accept": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("OpenStreetMap request failed");
+    }
 
     const data = await response.json();
     res.json(data);
+
   } catch (err) {
-    console.error("Reverse geocode failed:", err);
+    console.error("Reverse geocode failed:", err.message);
     res.status(500).json({ error: "Failed to fetch address" });
   }
 });
+
+
