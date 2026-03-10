@@ -51,7 +51,7 @@ function DraggableMarker({ pos, setPos, setAddress, setCity, setPincode }) {
 async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+      `https://friends-auto-backend.onrender.com/reverse-geocode?lat=${lat}&lon=${lng}`
     );
 
     const data = await res.json();

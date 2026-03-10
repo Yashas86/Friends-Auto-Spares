@@ -131,39 +131,20 @@ app.post("/create-order", async (req, res) => {
 app.get("/reverse-geocode", async (req, res) => {
   const { lat, lon } = req.query;
 
-  if (!lat || !lon) {
-    return res.status(400).json({ error: "lat and lon are required" });
-  }
-
   try {
-    const url = `https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
 
-    const response = await fetch(url);
-    const data = await response.json();
-
-    const city =
-      data.address?.city ||
-      data.address?.town ||
-      data.address?.village ||
-      "";
-
-    const postcode =
-      data.address?.postcode ||
-      "";
-
-    const display =
-      data.display_name || "";
-
-    res.json({
-      display_name: display,
-      address: {
-        city: city,
-        postcode: postcode
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "friends-auto-spares-app"
       }
     });
 
+    const data = await response.json();
+    res.json(data);
+
   } catch (err) {
-    console.error("Reverse geocode failed:", err);
+    console.error(err);
     res.status(500).json({ error: "Failed to fetch address" });
   }
 });
