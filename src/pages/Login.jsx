@@ -53,25 +53,14 @@ export default function Login({
 
           <div className="bike-stage">
             <div className="bike-road" />
-            <div className="bike-speed bike-speed-one" />
-            <div className="bike-speed bike-speed-two" />
-            <div className="bike-speed bike-speed-three" />
 
-            <motion.div
-              className="bike-float-card bike-float-card-top"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
-            >
+            <div className="bike-float-card bike-float-card-top">
               Service-ready inventory
-            </motion.div>
+            </div>
 
-            <motion.div
-              className="bike-float-card bike-float-card-bottom"
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 4.4, repeat: Infinity, ease: "easeInOut" }}
-            >
+            <div className="bike-float-card bike-float-card-bottom">
               Built for daily riders
-            </motion.div>
+            </div>
 
             <svg
               className="bike-graphic"
