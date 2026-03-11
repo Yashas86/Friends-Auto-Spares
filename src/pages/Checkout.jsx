@@ -1,6 +1,6 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import { supabase } from "../supabase";
@@ -83,6 +83,8 @@ export default function Checkout({ cart, currentUser }) {
   const [pincode, setPincode] = useState(savedAddress?.pincode || "");
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [fullMap, setFullMap] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     window.setTimeout(() => {
@@ -131,204 +133,268 @@ export default function Checkout({ cart, currentUser }) {
     );
   };
 
+  const beginCheckoutAction = () => {
+    if (submitLockRef.current) {
+      return false;
+    }
+
+    submitLockRef.current = true;
+    setIsSubmitting(true);
+    return true;
+  };
+
+  const resetCheckoutAction = () => {
+    submitLockRef.current = false;
+    setIsSubmitting(false);
+  };
+
   const placeOrderCOD = async () => {
     if (!address) return alert("Please enter or select a delivery address before continuing.");
 
-    const orderPayload = {
-      id: Date.now(),
-      user: currentUser.email,
-      items: cart,
-      total: totalAmount,
-      method: "COD",
-      address,
-      city,
-      pincode,
-      status: "Confirmed",
-      createdAt: new Date().toISOString(),
-    };
-
-    await fetch("https://friends-auto-backend.onrender.com/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderPayload),
-    });
-
-    const { data: orderRow, error: insertError } = await supabase
-      .from("orders")
-      .insert({
-        user_email: currentUser.email,
-        total: totalAmount,
-        status: "Confirmed",
-      })
-      .select()
-      .single();
-
-    if (insertError || !orderRow) {
-      alert("We could not create your order at the moment. Please try again.");
+    if (!beginCheckoutAction()) {
       return;
     }
 
-    const doc = new jsPDF();
-    doc.text("Friends Auto Spares - Invoice", 20, 20);
-    doc.text(`Customer: ${currentUser.email}`, 20, 35);
-    doc.text(`Total: Rs.${totalAmount}`, 20, 45);
+    try {
+      const orderPayload = {
+        id: Date.now(),
+        user: currentUser.email,
+        items: cart,
+        total: totalAmount,
+        method: "COD",
+        address,
+        city,
+        pincode,
+        status: "Confirmed",
+        createdAt: new Date().toISOString(),
+      };
 
-    let y = 60;
-    cart.forEach((item) => {
-      doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
-      y += 10;
-    });
-
-    const pdfBlob = doc.output("blob");
-    const fileName = `invoice-${orderRow.id}.pdf`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("invoices")
-      .upload(fileName, pdfBlob, {
-        contentType: "application/pdf",
-        upsert: true,
+      await fetch("https://friends-auto-backend.onrender.com/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
       });
 
-    if (uploadError) {
-      console.error("Invoice upload failed:", uploadError);
-      alert("Your order was created, but the invoice could not be uploaded. Please try again.");
-      return;
+      const { data: orderRow, error: insertError } = await supabase
+        .from("orders")
+        .insert({
+          user_email: currentUser.email,
+          total: totalAmount,
+          status: "Confirmed",
+        })
+        .select()
+        .single();
+
+      if (insertError || !orderRow) {
+        alert("We could not create your order at the moment. Please try again.");
+        resetCheckoutAction();
+        return;
+      }
+
+      const doc = new jsPDF();
+      doc.text("Friends Auto Spares - Invoice", 20, 20);
+      doc.text(`Customer: ${currentUser.email}`, 20, 35);
+      doc.text(`Total: Rs.${totalAmount}`, 20, 45);
+
+      let y = 60;
+      cart.forEach((item) => {
+        doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
+        y += 10;
+      });
+
+      const pdfBlob = doc.output("blob");
+      const fileName = `invoice-${orderRow.id}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("invoices")
+        .upload(fileName, pdfBlob, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Invoice upload failed:", uploadError);
+        alert("Your order was created, but the invoice could not be uploaded. Please try again.");
+        resetCheckoutAction();
+        return;
+      }
+
+      const { data: publicData } = supabase.storage.from("invoices").getPublicUrl(fileName);
+
+      if (!publicData?.publicUrl) {
+        alert("We could not generate the invoice link. Please try again.");
+        resetCheckoutAction();
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({ invoice_url: publicData.publicUrl })
+        .eq("id", orderRow.id);
+
+      if (updateError) {
+        console.error("Invoice URL save failed:", updateError);
+        alert("We could not save the invoice details. Please try again.");
+        resetCheckoutAction();
+        return;
+      }
+
+      localStorage.setItem(
+        `address_${currentUser.email}`,
+        JSON.stringify({ address, city, pincode })
+      );
+
+      navigate("/order-success", {
+        state: { order: orderPayload },
+      });
+    } catch (error) {
+      console.error(error);
+      alert("We could not place your order at the moment. Please try again.");
+      resetCheckoutAction();
     }
-
-    const { data: publicData } = supabase.storage.from("invoices").getPublicUrl(fileName);
-
-    if (!publicData?.publicUrl) {
-      return alert("We could not generate the invoice link. Please try again.");
-    }
-
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({ invoice_url: publicData.publicUrl })
-      .eq("id", orderRow.id);
-
-    if (updateError) {
-      console.error("Invoice URL save failed:", updateError);
-      return alert("We could not save the invoice details. Please try again.");
-    }
-
-    localStorage.setItem(
-      `address_${currentUser.email}`,
-      JSON.stringify({ address, city, pincode })
-    );
-
-    navigate("/order-success", {
-      state: { order: orderPayload },
-    });
   };
 
   const payWithRazorpay = async () => {
     if (!address) return alert("Please enter or select a delivery address before continuing.");
 
-    const res = await fetch("https://friends-auto-backend.onrender.com/create-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: totalAmount }),
-    });
+    if (!beginCheckoutAction()) {
+      return;
+    }
 
-    const order = await res.json();
+    if (!window.Razorpay) {
+      alert("Razorpay is not available right now. Please try again in a moment.");
+      resetCheckoutAction();
+      return;
+    }
 
-    const options = {
-      key: "rzp_test_SHdoRZz35PXXFp",
-      amount: order.amount,
-      currency: "INR",
-      name: "Friends Auto Spares",
-      description: "Bike Parts Order",
-      order_id: order.id,
-      handler: async function handlePayment(response) {
-        const orderPayload = {
-          id: response.razorpay_payment_id,
-          user: currentUser.email,
-          items: cart,
-          total: totalAmount,
-          method: "ONLINE",
-          paymentId: response.razorpay_payment_id,
-          address,
-          city,
-          pincode,
-          status: "Paid",
-          createdAt: new Date().toISOString(),
-        };
+    try {
+      const res = await fetch("https://friends-auto-backend.onrender.com/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: totalAmount }),
+      });
 
-        await fetch("https://friends-auto-backend.onrender.com/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(orderPayload),
-        });
+      const order = await res.json();
 
-        const { data: orderRow, error } = await supabase
-          .from("orders")
-          .insert({
-            user_email: currentUser.email,
+      const options = {
+        key: "rzp_test_SHdoRZz35PXXFp",
+        amount: order.amount,
+        currency: "INR",
+        name: "Friends Auto Spares",
+        description: "Bike Parts Order",
+        order_id: order.id,
+        modal: {
+          ondismiss: () => {
+            resetCheckoutAction();
+          },
+        },
+        handler: async function handlePayment(response) {
+          const orderPayload = {
+            id: response.razorpay_payment_id,
+            user: currentUser.email,
+            items: cart,
             total: totalAmount,
-            status: "Confirmed",
-          })
-          .select()
-          .single();
+            method: "ONLINE",
+            paymentId: response.razorpay_payment_id,
+            address,
+            city,
+            pincode,
+            status: "Paid",
+            createdAt: new Date().toISOString(),
+          };
 
-        if (error) return alert("We could not create your order at the moment. Please try again.");
+          await fetch("https://friends-auto-backend.onrender.com/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(orderPayload),
+          });
 
-        const doc = new jsPDF();
-        doc.text("Friends Auto Spares - Invoice", 20, 20);
-        doc.text(`Customer: ${currentUser.email}`, 20, 35);
-        doc.text(`Total: Rs.${totalAmount}`, 20, 45);
+          const { data: orderRow, error } = await supabase
+            .from("orders")
+            .insert({
+              user_email: currentUser.email,
+              total: totalAmount,
+              status: "Confirmed",
+            })
+            .select()
+            .single();
 
-        let y = 60;
-        cart.forEach((item) => {
-          doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
-          y += 10;
-        });
+          if (error) {
+            alert("We could not create your order at the moment. Please try again.");
+            resetCheckoutAction();
+            return;
+          }
 
-        const pdfBlob = doc.output("blob");
-        const fileName = `invoice-${orderRow.id}.pdf`;
+          const doc = new jsPDF();
+          doc.text("Friends Auto Spares - Invoice", 20, 20);
+          doc.text(`Customer: ${currentUser.email}`, 20, 35);
+          doc.text(`Total: Rs.${totalAmount}`, 20, 45);
 
-        const { error: uploadError } = await supabase.storage
-          .from("invoices")
-          .upload(fileName, pdfBlob, { upsert: true });
+          let y = 60;
+          cart.forEach((item) => {
+            doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
+            y += 10;
+          });
 
-        if (uploadError) {
-          console.error(uploadError);
-          return alert("Your order was created, but the invoice could not be uploaded. Please try again.");
-        }
+          const pdfBlob = doc.output("blob");
+          const fileName = `invoice-${orderRow.id}.pdf`;
 
-        const { data: publicData } = supabase.storage
-          .from("invoices")
-          .getPublicUrl(fileName);
+          const { error: uploadError } = await supabase.storage
+            .from("invoices")
+            .upload(fileName, pdfBlob, { upsert: true });
 
-        if (!publicData?.publicUrl) {
-          return alert("We could not generate the invoice link. Please try again.");
-        }
+          if (uploadError) {
+            console.error(uploadError);
+            alert("Your order was created, but the invoice could not be uploaded. Please try again.");
+            resetCheckoutAction();
+            return;
+          }
 
-        const { error: updateError } = await supabase
-          .from("orders")
-          .update({ invoice_url: publicData.publicUrl })
-          .eq("id", orderRow.id);
+          const { data: publicData } = supabase.storage
+            .from("invoices")
+            .getPublicUrl(fileName);
 
-        if (updateError) {
-          console.error(updateError);
-          alert("We could not save the invoice details. Please try again.");
-          return;
-        }
+          if (!publicData?.publicUrl) {
+            alert("We could not generate the invoice link. Please try again.");
+            resetCheckoutAction();
+            return;
+          }
 
-        localStorage.setItem(
-          `address_${currentUser.email}`,
-          JSON.stringify({ address, city, pincode })
-        );
+          const { error: updateError } = await supabase
+            .from("orders")
+            .update({ invoice_url: publicData.publicUrl })
+            .eq("id", orderRow.id);
 
-        navigate("/order-success", {
-          state: { order: orderPayload },
-        });
-      },
-      prefill: { email: currentUser?.email },
-      theme: { color: "#2563eb" },
-    };
+          if (updateError) {
+            console.error(updateError);
+            alert("We could not save the invoice details. Please try again.");
+            resetCheckoutAction();
+            return;
+          }
 
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+          localStorage.setItem(
+            `address_${currentUser.email}`,
+            JSON.stringify({ address, city, pincode })
+          );
+
+          navigate("/order-success", {
+            state: { order: orderPayload },
+          });
+        },
+        prefill: { email: currentUser?.email },
+        theme: { color: "#2563eb" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", () => {
+        resetCheckoutAction();
+      });
+      rzp.open();
+    } catch (error) {
+      console.error(error);
+      alert("Razorpay could not be opened right now. Please try again.");
+      resetCheckoutAction();
+    }
   };
 
   const handleCheckoutSubmit = () => {
@@ -442,6 +508,7 @@ export default function Checkout({ cart, currentUser }) {
                 paymentMethod === "COD" ? "active" : ""
               }`}
               onClick={() => setPaymentMethod("COD")}
+              disabled={isSubmitting}
             >
               <strong>Cash on Delivery</strong>
               <span>Pay when the order arrives at your address.</span>
@@ -452,6 +519,7 @@ export default function Checkout({ cart, currentUser }) {
                 paymentMethod === "ONLINE" ? "active" : ""
               }`}
               onClick={() => setPaymentMethod("ONLINE")}
+              disabled={isSubmitting}
             >
               <strong>Razorpay</strong>
               <span>Complete payment securely before order confirmation.</span>
@@ -480,8 +548,18 @@ export default function Checkout({ cart, currentUser }) {
             <strong>Rs. {totalAmount}</strong>
           </div>
 
-          <button className="surface-primary-btn" onClick={handleCheckoutSubmit}>
-            {paymentMethod === "COD" ? "Place COD order" : "Pay with Razorpay"}
+          <button
+            className="surface-primary-btn"
+            onClick={handleCheckoutSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? paymentMethod === "COD"
+                ? "Placing your order..."
+                : "Opening Razorpay..."
+              : paymentMethod === "COD"
+              ? "Place COD order"
+              : "Pay with Razorpay"}
           </button>
         </aside>
       </div>
