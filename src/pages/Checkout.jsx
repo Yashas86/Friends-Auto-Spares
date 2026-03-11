@@ -56,13 +56,13 @@ async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
 
     const data = await res.json();
 
-    const fullAddress = data.display_name || "";
+    const fullAddress =
+      `${data.address?.road || ""}, ${data.address?.suburb || ""}, ${data.address?.city || ""}, ${data.address?.state || ""}, ${data.address?.postcode || ""}, ${data.address?.country || ""}`;
 
     const city =
       data.address?.city ||
       data.address?.town ||
       data.address?.village ||
-      data.address?.state ||
       "";
 
     const pincode = data.address?.postcode || "";
