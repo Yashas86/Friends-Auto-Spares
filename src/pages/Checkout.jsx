@@ -67,7 +67,7 @@ async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
     setPincode(pincode);
   } catch (error) {
     console.error(error);
-    alert("Failed to fetch address");
+    alert("We could not retrieve the selected address. Please try again.");
   }
 }
 
@@ -130,13 +130,13 @@ export default function Checkout({ cart, currentUser }) {
           return currentPos;
         });
       },
-      () => alert("Location permission denied"),
+      () => alert("Location access was denied. Please enable location permission and try again."),
       { enableHighAccuracy: true, timeout: 15000 }
     );
   };
 
   const placeOrderCOD = async () => {
-    if (!address) return alert("Please select address");
+    if (!address) return alert("Please enter or select a delivery address before continuing.");
 
     const orderPayload = {
       id: Date.now(),
@@ -168,7 +168,7 @@ export default function Checkout({ cart, currentUser }) {
       .single();
 
     if (insertError || !orderRow) {
-      alert("Order insert failed. Check console.");
+      alert("We could not create your order at the moment. Please try again.");
       return;
     }
 
@@ -195,14 +195,14 @@ export default function Checkout({ cart, currentUser }) {
 
     if (uploadError) {
       console.error("Invoice upload failed:", uploadError);
-      alert("Invoice upload failed");
+      alert("Your order was created, but the invoice could not be uploaded. Please try again.");
       return;
     }
 
     const { data: publicData } = supabase.storage.from("invoices").getPublicUrl(fileName);
 
     if (!publicData?.publicUrl) {
-      return alert("Failed to get invoice URL");
+      return alert("We could not generate the invoice link. Please try again.");
     }
 
     const { error: updateError } = await supabase
@@ -212,7 +212,7 @@ export default function Checkout({ cart, currentUser }) {
 
     if (updateError) {
       console.error("Invoice URL save failed:", updateError);
-      return alert("Failed to save invoice URL");
+      return alert("We could not save the invoice details. Please try again.");
     }
 
     localStorage.setItem(
@@ -226,7 +226,7 @@ export default function Checkout({ cart, currentUser }) {
   };
 
   const payWithRazorpay = async () => {
-    if (!address) return alert("Please select address");
+    if (!address) return alert("Please enter or select a delivery address before continuing.");
 
     const res = await fetch("https://friends-auto-backend.onrender.com/create-order", {
       method: "POST",
@@ -274,7 +274,7 @@ export default function Checkout({ cart, currentUser }) {
           .select()
           .single();
 
-        if (error) return alert("Order insert failed");
+        if (error) return alert("We could not create your order at the moment. Please try again.");
 
         const doc = new jsPDF();
         doc.text("Friends Auto Spares - Invoice", 20, 20);
@@ -296,7 +296,7 @@ export default function Checkout({ cart, currentUser }) {
 
         if (uploadError) {
           console.error(uploadError);
-          return alert("Invoice upload failed");
+          return alert("Your order was created, but the invoice could not be uploaded. Please try again.");
         }
 
         const { data: publicData } = supabase.storage
@@ -304,7 +304,7 @@ export default function Checkout({ cart, currentUser }) {
           .getPublicUrl(fileName);
 
         if (!publicData?.publicUrl) {
-          return alert("Failed to get invoice URL");
+          return alert("We could not generate the invoice link. Please try again.");
         }
 
         const { error: updateError } = await supabase
@@ -314,7 +314,7 @@ export default function Checkout({ cart, currentUser }) {
 
         if (updateError) {
           console.error(updateError);
-          alert("Failed to save invoice URL");
+          alert("We could not save the invoice details. Please try again.");
           return;
         }
 

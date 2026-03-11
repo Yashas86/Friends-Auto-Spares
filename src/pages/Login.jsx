@@ -130,10 +130,7 @@ export default function Login({
               Create account
             </button>
 
-            <p className="auth-footnote">
-              Blue-and-white workspace designed for quick access and minimal
-              friction.
-            </p>
+        
           </motion.div>
         </motion.section>
       </div>

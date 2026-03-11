@@ -86,7 +86,7 @@ export default function Admin({ products = [], setProducts, orders, setOrders })
       return;
     }
 
-    alert("Invalid admin login");
+    alert("Admin sign-in failed. Please check your credentials and try again.");
   };
 
   const logout = () => {
@@ -102,7 +102,7 @@ export default function Admin({ products = [], setProducts, orders, setOrders })
 
   const submit = async () => {
     if (!form.name || !form.price) {
-      alert("Name and price are required");
+      alert("Please provide both a product name and a price.");
       return;
     }
 
@@ -115,7 +115,7 @@ export default function Admin({ products = [], setProducts, orders, setOrders })
         .upload(fileName, form.imageFile, { upsert: true });
 
       if (error) {
-        alert("Image upload failed");
+        alert("The product image could not be uploaded. Please try again.");
         return;
       }
 

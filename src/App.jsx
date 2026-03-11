@@ -98,8 +98,14 @@ const [products, setProducts] = useState(() => {
         setCurrentUser(supaUser);
         localStorage.setItem("currentUser", JSON.stringify(supaUser));
       } else {
-        setCurrentUser(null);
-        localStorage.removeItem("currentUser");
+        const savedUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+
+        if (savedUser && savedUser.provider !== "google") {
+          setCurrentUser(savedUser);
+        } else {
+          setCurrentUser(null);
+          localStorage.removeItem("currentUser");
+        }
       }
     });
 
@@ -117,9 +123,13 @@ const [products, setProducts] = useState(() => {
 
   // 🔐 Local Auth (demo)
   const signup = () => {
-    if (!email || !password) return alert("Enter email & password");
-    if (users.find((u) => u.email === email)) return alert("User already exists");
-    const newUser = { email, password };
+    if (!email || !password) {
+      return alert("Please enter both your email address and password.");
+    }
+    if (users.find((u) => u.email === email)) {
+      return alert("An account with this email address already exists.");
+    }
+    const newUser = { email, password, provider: "local" };
     setUsers([...users, newUser]);
     setCurrentUser(newUser);
     setEmail("");
@@ -130,8 +140,8 @@ const [products, setProducts] = useState(() => {
     const user = users.find(
       (u) => u.email === email && u.password === password
     );
-    if (!user) return alert("Invalid login");
-    setCurrentUser(user);
+    if (!user) return alert("The email address or password you entered is incorrect.");
+    setCurrentUser({ ...user, provider: user.provider || "local" });
     setEmail("");
     setPassword("");
   };
@@ -207,17 +217,24 @@ const [products, setProducts] = useState(() => {
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("currentUser");
+    }
   }, [currentUser]);
 
   // 🔥 Google Login (Supabase)
   const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
 
     if (error) {
-      alert("Google login failed");
+      alert("Google sign-in could not be completed. Please try again.");
       console.error(error);
     }
   };
