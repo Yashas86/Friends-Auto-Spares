@@ -51,14 +51,25 @@ function DraggableMarker({ pos, setPos, setAddress, setCity, setPincode }) {
 async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
   try {
     const res = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
     );
 
     const data = await res.json();
 
-    setAddress(`${data.locality}, ${data.principalSubdivision}, ${data.countryName}`);
-    setCity(data.city || data.locality);
-    setPincode(data.postcode || "");
+    const fullAddress = data.display_name || "";
+
+    const city =
+      data.address?.city ||
+      data.address?.town ||
+      data.address?.village ||
+      data.address?.state ||
+      "";
+
+    const pincode = data.address?.postcode || "";
+
+    setAddress(fullAddress);
+    setCity(city);
+    setPincode(pincode);
 
   } catch (err) {
     console.error(err);
