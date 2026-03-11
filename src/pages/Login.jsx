@@ -8,16 +8,18 @@ export default function Login({
   setPassword,
 }) {
   const highlights = [
-    "Fast reorders for oils, brakes, and service parts",
-    "Track orders and delivery details in one place",
-    "Switch between local login and Google sign-in",
+    "Fast reorders for engine oils, chains, brake kits, and service parts",
+    "Track workshop orders, saved addresses, and delivery updates in one place",
+    "Switch between local login and Google sign-in without losing your cart",
   ];
 
   const stats = [
-    { value: "24/7", label: "Account access" },
-    { value: "1 tap", label: "Google sign-in" },
-    { value: "Pro", label: "Workshop-ready parts" },
+    { value: "OEM", label: "Bike-ready inventory" },
+    { value: "Fast", label: "Repeat checkout" },
+    { value: "24/7", label: "Rider access" },
   ];
+
+  const categories = ["Engine Oils", "Brake Kits", "Chain Care", "Rider Essentials"];
 
   const handleEnter = (event) => {
     if (event.key === "Enter") {
@@ -37,9 +39,17 @@ export default function Login({
           <div className="login-chip">Premium rider access</div>
           <h1 className="bike-title">Friends Auto Spares</h1>
           <p className="login-tagline">
-            Professional ordering for bike essentials, faster repeat purchases,
-            and a cleaner checkout flow.
+            Professional access for riders, garages, and repeat service orders.
+            Buy trusted motorcycle parts with a cleaner, faster login flow.
           </p>
+
+          <div className="login-category-strip">
+            {categories.map((item) => (
+              <span key={item} className="login-category-pill">
+                {item}
+              </span>
+            ))}
+          </div>
 
           <div className="bike-stage">
             <div className="bike-road" />
@@ -146,8 +156,8 @@ export default function Login({
               <span className="login-kicker">Member sign in</span>
               <h2 className="login-title">Welcome back</h2>
               <p className="login-copy">
-                Access your cart, saved orders, and bike parts history from one
-                clean dashboard.
+                Access your cart, bike parts history, and saved workshop orders
+                from one focused dashboard.
               </p>
             </div>
 

@@ -2898,9 +2898,10 @@ button {
   min-height: 100vh;
   padding: 32px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.16), transparent 26%),
     radial-gradient(circle at 82% 18%, rgba(249, 115, 22, 0.2), transparent 30%),
@@ -2940,7 +2941,8 @@ button {
   position: relative;
   z-index: 1;
   width: min(1180px, 100%);
-  min-height: min(760px, calc(100vh - 64px));
+  margin: auto;
+  min-height: auto;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
   gap: 28px;
@@ -2959,6 +2961,8 @@ button {
 }
 
 .login-showcase {
+  display: flex;
+  flex-direction: column;
   padding: 26px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2999,6 +3003,25 @@ button {
   color: #c3d2e6;
   font-size: 17px;
   line-height: 1.7;
+}
+
+.login-category-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.login-category-pill {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.46);
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .bike-stage {
@@ -3471,6 +3494,14 @@ button {
     border-radius: 24px;
   }
 
+  .login-right {
+    order: 1;
+  }
+
+  .login-showcase {
+    order: 2;
+  }
+
   .login-showcase,
   .login-card {
     padding: 22px;
@@ -3523,6 +3554,78 @@ button {
 
   .login-card {
     padding: 20px;
+  }
+
+  .login-category-strip {
+    gap: 8px;
+  }
+
+  .login-category-pill {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+}
+
+@media (max-height: 860px) {
+  .login-page {
+    padding: 20px;
+  }
+
+  .login-shell {
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .login-showcase,
+  .login-card {
+    padding: 22px;
+  }
+
+  .bike-stage {
+    min-height: 240px;
+    margin-top: 20px;
+  }
+
+  .login-stat-row,
+  .login-highlights {
+    margin-top: 18px;
+  }
+}
+
+@media (max-height: 760px) {
+  .login-page {
+    padding: 14px;
+  }
+
+  .login-shell {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .bike-title {
+    font-size: clamp(38px, 5vw, 64px);
+  }
+
+  .login-tagline {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .bike-stage {
+    min-height: 200px;
+    padding: 16px;
+  }
+
+  .login-stat-card {
+    padding: 12px;
+  }
+
+  .login-stat-card strong {
+    font-size: 22px;
+  }
+
+  .login-highlights {
+    display: none;
   }
 }
 
