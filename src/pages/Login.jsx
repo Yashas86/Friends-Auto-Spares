@@ -94,7 +94,7 @@ export default function Login({
               <input
                 className="auth-input"
                 type="email"
-                placeholder="you@example.com"
+                placeholder=""
                 onChange={(event) => setEmail(event.target.value)}
                 onKeyDown={handleEnter}
               />
