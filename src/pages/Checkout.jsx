@@ -51,27 +51,14 @@ function DraggableMarker({ pos, setPos, setAddress, setCity, setPincode }) {
 async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
   try {
     const res = await fetch(
-      `https://friends-auto-backend.onrender.com/reverse-geocode?lat=${lat}&lon=${lng}`
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
     );
 
     const data = await res.json();
 
-    const fullAddress = data.display_name || "";
-
-    const city =
-      data.address?.city ||
-      data.address?.town ||
-      data.address?.village ||
-      data.address?.state ||
-      "";
-
-    const pincode = data.address?.postcode || "";
-
-    console.log(data); // helps debugging
-
-    setAddress(fullAddress);
-    setCity(city);
-    setPincode(pincode);
+    setAddress(`${data.locality}, ${data.principalSubdivision}, ${data.countryName}`);
+    setCity(data.city || data.locality);
+    setPincode(data.postcode || "");
 
   } catch (err) {
     console.error(err);
