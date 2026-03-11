@@ -12,7 +12,6 @@ import ProductDetails from "./pages/ProductDetails";
 import OrderSuccess from "./pages/OrderSuccess";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
-import BottomNav from "./components/BottomNav";
 import Footer from "./components/Footer";
 
 export default function AppRoutes({
@@ -154,7 +153,6 @@ export default function AppRoutes({
 </div>
 
   <Footer />
-  <BottomNav cartCount={cart.length} />
 </>
   );
 }

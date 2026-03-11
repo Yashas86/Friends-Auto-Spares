@@ -106,10 +106,6 @@ export default function Checkout({ cart, currentUser }) {
       (geo) => {
         const { latitude, longitude } = geo.coords;
 
-        if (isMobile()) {
-          setFullMap(true);
-        }
-
         setPos((currentPos) => {
           const [startLat, startLng] = currentPos;
           const steps = 20;
