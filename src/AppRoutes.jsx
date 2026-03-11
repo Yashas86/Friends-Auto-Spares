@@ -13,6 +13,7 @@ import OrderSuccess from "./pages/OrderSuccess";
 import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import BottomNav from "./components/BottomNav";
+import Footer from "./components/Footer";
 
 export default function AppRoutes({
   currentUser,
@@ -152,6 +153,7 @@ export default function AppRoutes({
   </AnimatePresence>
 </div>
 
+  <Footer />
   <BottomNav cartCount={cart.length} />
 </>
   );

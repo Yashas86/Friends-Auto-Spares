@@ -6,119 +6,165 @@ export default function Cart({ cart, setCart, vehicle }) {
   const navigate = useNavigate();
   const [removingId, setRemovingId] = useState(null);
 
+  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
   if (!cart.length) {
     return (
-      <div>
-        <h2>🧺 Your Cart</h2>
-        <p>Your cart is empty.</p>
+      <div className="cart-page-shell">
+        <section className="empty-surface">
+          <span className="page-kicker">Your cart</span>
+          <h2>Your cart is empty</h2>
+          <p>Add products from the shop to start building your order.</p>
+          <button className="surface-primary-btn" onClick={() => navigate("/shop")}>
+            Continue shopping
+          </button>
+        </section>
       </div>
     );
   }
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-
   return (
-    <div className="cart-page cart-layout">
-      <h2>🧺 Your Cart</h2>
+    <div className="cart-page-shell">
+      <section className="cart-hero-panel">
+        <div>
+          <span className="page-kicker">Cart overview</span>
+          <h1>Review your selected bike parts before checkout.</h1>
+          <p>
+            Update quantities, remove extras, and make sure every item is ready
+            before delivery.
+          </p>
+        </div>
 
-       <div className="cart-items">
-      {cart.map((item) => (
-        <div
-  key={item.id}
-  className={`cart-item ${removingId === item.id ? "slide-out" : ""}`}
->
-       <img
-  src={item.image || item.image_url || "/images/placeholder.png"}
-  alt={item.name}
-  className="cart-image"
-  onError={(e) => {
-    e.currentTarget.onerror = null;
-    e.currentTarget.src = "/images/placeholder.png";
-  }}
-/>
+        <div className="cart-hero-stats">
+          <div className="cart-stat-card">
+            <strong>{totalItems}</strong>
+            <span>items</span>
+          </div>
+          <div className="cart-stat-card">
+            <strong>Rs. {subtotal}</strong>
+            <span>subtotal</span>
+          </div>
+        </div>
+      </section>
 
-          <div style={{ flex: 1 }}>
-            <b>{item.name}</b>
+      <div className="cart-layout-v2">
+        <section className="cart-items-surface">
+          {cart.map((item) => (
+            <article
+              key={item.id}
+              className={`cart-item-v2 ${removingId === item.id ? "slide-out" : ""}`}
+            >
+              <div className="cart-item-media">
+                <img
+                  src={item.image || item.image_url || "/images/placeholder.png"}
+                  alt={item.name}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = "/images/placeholder.png";
+                  }}
+                />
+              </div>
 
-                   {vehicle && (
-  <span
-    style={{
-      display: "inline-block",
-      marginTop: 4,
-      padding: "4px 8px",
-      borderRadius: 999,
-      fontSize: 12,
-      background:
-        item.compatible?.model === vehicle.model ? "#dcfce7" : "#fee2e2",
-      color:
-        item.compatible?.model === vehicle.model ? "#166534" : "#991b1b",
-    }}
-  >
-    {item.compatible?.model === vehicle.model
-      ? `Fits your ${vehicle.model}`
-      : "May not fit your bike"}
-  </span>
-)}
+              <div className="cart-item-content">
+                <div className="cart-item-head">
+                  <div>
+                    <h3>{item.name}</h3>
+                    <p>{item.brand || item.category || "Bike accessory"}</p>
+                  </div>
+                  <strong>Rs. {item.price * item.qty}</strong>
+                </div>
 
-            <p>₹{item.price}</p>
-            <div className="qty-controls">
-              <button
-                onClick={() =>
-                  setCart((prev) =>
-                    prev.map((p) =>
-                      p.id === item.id
-                        ? { ...p, qty: Math.max(1, p.qty - 1) }
-                        : p
-                    )
-                  )
-                }
-              >
-                −
-              </button>
+                {vehicle && (
+                  <span className="cart-fit-pill">
+                    {item.compatible?.model === vehicle.model
+                      ? `Fits your ${vehicle.model}`
+                      : "Check bike compatibility"}
+                  </span>
+                )}
 
-              <b>{item.qty}</b>
+                <div className="cart-item-actions">
+                  <div className="qty-controls-v2">
+                    <button
+                      onClick={() =>
+                        setCart((prev) =>
+                          prev.map((product) =>
+                            product.id === item.id
+                              ? { ...product, qty: Math.max(1, product.qty - 1) }
+                              : product
+                          )
+                        )
+                      }
+                    >
+                      -
+                    </button>
+                    <span>{item.qty}</span>
+                    <button
+                      onClick={() =>
+                        setCart((prev) =>
+                          prev.map((product) =>
+                            product.id === item.id
+                              ? { ...product, qty: product.qty + 1 }
+                              : product
+                          )
+                        )
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
 
-              <button
-                onClick={() =>
-                  setCart((prev) =>
-                    prev.map((p) =>
-                      p.id === item.id ? { ...p, qty: p.qty + 1 } : p
-                    )
-                  )
-                }
-              >
-                +
-              </button>
+                  <button
+                    className="cart-remove-btn"
+                    onClick={() => {
+                      setRemovingId(item.id);
+                      window.setTimeout(() => {
+                        setCart((prev) => prev.filter((product) => product.id !== item.id));
+                        setRemovingId(null);
+                      }, 280);
+                    }}
+                  >
+                    <FiTrash2 />
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <aside className="cart-summary-v2">
+          <span className="page-kicker">Order summary</span>
+          <h2>Ready for checkout</h2>
+
+          <div className="cart-summary-list">
+            <div>
+              <span>Items</span>
+              <strong>{totalItems}</strong>
+            </div>
+            <div>
+              <span>Subtotal</span>
+              <strong>Rs. {subtotal}</strong>
+            </div>
+            <div>
+              <span>Shipping</span>
+              <strong>Calculated in checkout</strong>
             </div>
           </div>
 
-<button
-  className="trash-btn"
-  onClick={() => {
-    setRemovingId(item.id);
-    setTimeout(() => {
-      setCart((prev) => prev.filter((p) => p.id !== item.id));
-      setRemovingId(null);
-    }, 300);
-  }}
->
-  <FiTrash2 />
-</button>
-        </div>
-      ))}
-      </div>
-
-      {/* Amazon-style summary */}
-<div className="cart-summary">
-        <h3>Order Summary</h3>
-        <p>Items: {cart.reduce((s, i) => s + i.qty, 0)}</p>
-        <h2 className="animated-total">Total: ₹{total}</h2>
-<button
-  onClick={() => navigate("/checkout")}
-  className="checkout-btn"
->
-  Proceed to Checkout →
-</button>
+          <button
+            className="surface-primary-btn"
+            onClick={() => navigate("/checkout")}
+          >
+            Proceed to checkout
+          </button>
+          <button
+            className="surface-secondary-btn"
+            onClick={() => navigate("/shop")}
+          >
+            Continue shopping
+          </button>
+        </aside>
       </div>
     </div>
   );

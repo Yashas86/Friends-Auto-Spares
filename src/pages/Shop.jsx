@@ -1,180 +1,197 @@
-import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
-import BrandBar from "../components/BrandBar";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
-import VehicleSelector from "../components/VehicleSelector";
+import BrandBar from "../components/BrandBar";
 
-export default function Shop({ products = [], addToCart, vehicle, setVehicle }) {
+export default function Shop({ products = [], addToCart, vehicle }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [params] = useSearchParams();
-  const [bike, setBike] = useState("All");
-
-  /* ---------------------- URL PARAMS ---------------------- */
-  const brandParam = params.get("brand") || "";
-  const searchParam = params.get("search") || "";
-
-  /* ---------------------- LOCAL STATE ---------------------- */
-  
   const [category, setCategory] = useState("All");
-  const [search, setSearch] = useState(searchParam);
+  const [search, setSearch] = useState(params.get("search") || "");
   const [sort, setSort] = useState("new");
 
-  /* ---------------------- BASE PRODUCTS ---------------------- */
- const baseProducts = (products || []).filter((p) => !p.deleted);
+  const brandParam = params.get("brand") || "";
+  const searchParam = params.get("search") || "";
+  const categoryParam = params.get("category") || "";
 
-  /* ---------------------- FILTERING ---------------------- */
-
-  const filteredByBrand = brandParam
-    ? baseProducts.filter((p) => p.brand === brandParam)
-    : baseProducts;
-
-  const filteredByVehicle = vehicle
-    ? filteredByBrand.filter(
-        (p) =>
-          p.compatible?.brand === vehicle.brand &&
-          p.compatible?.model === vehicle.model &&
-          p.compatible?.year === vehicle.year &&
-          p.compatible?.variant === vehicle.variant
-      )
-    : filteredByBrand;
-
-  const filteredByBike = filteredByVehicle;
-
-
-  const filteredByCategory =
-    category === "All"
-      ? filteredByBike
-      : filteredByBike.filter((p) => p.category === category);
-
-  const finalProducts = filteredByCategory.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const sortedProducts = [...finalProducts].sort((a, b) => {
-    if (sort === "low") return a.price - b.price;
-    if (sort === "high") return b.price - a.price;
-    return 0;
-  });
-
-  /* ---------------------- BIKE FILTER OPTIONS ---------------------- */
-  const bikesForBrand = useMemo(() => {
-    const bikes = filteredByBrand.map((p) => p.bike);
-    return ["All", "Universal", ...new Set(bikes.filter(Boolean))];
-  }, [filteredByBrand]);
+  const availableCategories = useMemo(() => {
+    return ["All", ...new Set(products.map((item) => item.category).filter(Boolean))];
+  }, [products]);
 
   useEffect(() => {
-    setBike("All");
-    setCategory("All");
-  }, [brandParam]);
+    setSearch(searchParam);
+    setCategory(categoryParam || "All");
+  }, [searchParam, categoryParam, brandParam]);
 
-  /* ---------------------- UI ---------------------- */
+  const visibleProducts = useMemo(() => {
+    const baseProducts = products.filter((item) => !item.deleted);
+
+    const byBrand = brandParam
+      ? baseProducts.filter((item) => item.brand === brandParam)
+      : baseProducts;
+
+    const byVehicle = vehicle
+      ? byBrand.filter(
+          (item) =>
+            item.compatible?.brand === vehicle.brand &&
+            item.compatible?.model === vehicle.model &&
+            item.compatible?.year === vehicle.year &&
+            item.compatible?.variant === vehicle.variant
+        )
+      : byBrand;
+
+    const byCategory =
+      category === "All"
+        ? byVehicle
+        : byVehicle.filter((item) => item.category === category);
+
+    const bySearch = byCategory.filter((item) =>
+      item.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const sorted = [...bySearch];
+
+    if (sort === "low") {
+      sorted.sort((a, b) => a.price - b.price);
+    } else if (sort === "high") {
+      sorted.sort((a, b) => b.price - a.price);
+    }
+
+    return sorted;
+  }, [products, brandParam, vehicle, category, search, sort]);
 
   return (
-    <div className="container">
-
-     <div className="shop-header">
-  <div className="shop-title">
-    <span className="shop-icon">🛍️</span>
-    <h2>Shop</h2>
-  </div>
-</div>
-
-
-     {/* <VehicleSelector onSelect={setVehicle} />*/}
-    <BrandBar brandParam={brandParam} />  
-
-      {/* SEARCH + FILTER CARD */}
-     <div className="shop-filter-container">
-        <input
-          type="text"
-          placeholder="🔍 Search engine oil, brakes..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="new">Newest</option>
-            <option value="low">Price: Low → High</option>
-            <option value="high">Price: High → Low</option>
-          </select>
-
-          {brandParam && (
-            <>
-             
-
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <option>All</option>
-                <option>Oil</option>
-                <option>Brakes</option>
-                <option>Accessories</option>
-              </select>
-            </>
-          )}
+    <div className="shop-page-shell">
+      <section className="shop-hero-panel">
+        <div>
+          <span className="page-kicker">Bike parts catalog</span>
+          <h1>
+            Find the right product faster with cleaner filters and brand-first
+            browsing.
+          </h1>
+          <p>
+            Explore engine oils, brakes, accessories, and trusted workshop parts
+            across major bike brands.
+          </p>
         </div>
-      </div>
 
-      {/* PRODUCT GRID */}
-      <div className="shop-grid fade-in">
-        {sortedProducts.map((p) => (
-          <div
-            key={p.id}
-            className="product-card"
-            onClick={() => navigate(`/product/${p.id}`)}
-          >
-            {p.discount && (
-              <div className="discount-badge">
-                {p.discount}% OFF
-              </div>
-            )}
-
-            
-             <img
-  src={p.image || p.image_url || "/images/placeholder.png"}
-              alt={p.name}
-              className="product-image"
-            />
-
-            <h4>{p.name}</h4>
-            <p className="product-desc">{p.desc}</p>
-            <p className="product-price">₹{p.price}</p>
-
-            {vehicle && (
-              <span className="fit-badge">
-                {p.compatible?.model === vehicle.model
-                  ? `Fits your ${vehicle.model}`
-                  : "May not fit your bike"}
-              </span>
-            )}
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                addToCart(p);
-              }}
-              className="add-to-cart-btn ripple-btn"
-            >
-              Add to Cart
-            </button>
+        <div className="shop-hero-stats">
+          <div className="shop-hero-stat">
+            <strong>{visibleProducts.length}</strong>
+            <span>matching products</span>
           </div>
-        ))}
-      </div>
+          <div className="shop-hero-stat">
+            <strong>{brandParam || "All"}</strong>
+            <span>active brand</span>
+          </div>
+          <div className="shop-hero-stat">
+            <strong>{category}</strong>
+            <span>selected category</span>
+          </div>
+        </div>
+      </section>
 
-      {/* FIXED CART BAR */}
-      {/* FIXED CART BAR */}
-{sortedProducts.length > 0 && (
-  <div className="cart-bar">
-    <button
-      onClick={() => navigate("/cart")}
-      className="cart-bar-btn"
-    >
-      🛒 View Cart →
-    </button>
-  </div>
-)}
+      <section className="shop-filter-panel">
+        <div className="shop-filter-head">
+          <div>
+            <span className="page-kicker">Refine results</span>
+            <h2>Browse by brand, category, and price</h2>
+          </div>
+        </div>
+
+        <BrandBar brandParam={brandParam} />
+
+        <div className="shop-filter-grid">
+          <label className="shop-filter-field">
+            <span>Search</span>
+            <input
+              type="text"
+              placeholder="Search oils, chains, brake pads..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+
+          <label className="shop-filter-field">
+            <span>Category</span>
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              {availableCategories.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="shop-filter-field">
+            <span>Sort by</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              <option value="new">Featured</option>
+              <option value="low">Price: Low to High</option>
+              <option value="high">Price: High to Low</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      {visibleProducts.length === 0 ? (
+        <section className="empty-surface">
+          <h2>No products found</h2>
+          <p>Try changing the search term, category, or active brand filter.</p>
+          <button className="surface-primary-btn" onClick={() => navigate("/shop")}>
+            Reset filters
+          </button>
+        </section>
+      ) : (
+        <section className="shop-product-grid">
+          {visibleProducts.map((item) => (
+            <article
+              key={item.id}
+              className="shop-product-card-v2"
+              onClick={() => navigate(`/product/${item.id}`)}
+            >
+              <div className="shop-product-media">
+                {item.discount ? (
+                  <span className="shop-badge">{item.discount}% off</span>
+                ) : null}
+                <img
+                  src={item.image || item.image_url || "/images/placeholder.png"}
+                  alt={item.name}
+                  onError={(event) => {
+                    event.target.src = "/images/placeholder.png";
+                  }}
+                />
+              </div>
+
+              <div className="shop-product-body">
+                <span className="shop-product-brand">{item.brand || "Bike parts"}</span>
+                <h3>{item.name}</h3>
+                <p>{item.desc || item.description || "Trusted service-ready product."}</p>
+
+                <div className="shop-product-meta">
+                  <strong>Rs. {item.price}</strong>
+                  {vehicle && (
+                    <span className="shop-fit-pill">
+                      {item.compatible?.model === vehicle.model
+                        ? `Fits ${vehicle.model}`
+                        : "Universal fit"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                className="surface-primary-btn compact"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  addToCart(item);
+                }}
+              >
+                Add to cart
+              </button>
+            </article>
+          ))}
+        </section>
+      )}
     </div>
   );
 }

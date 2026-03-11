@@ -8,22 +8,19 @@ import L from "leaflet";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
-
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
 });
 
-
 const isMobile = () => window.innerWidth <= 768;
 
-// Smooth fly animation
 function FlyToLocation({ pos }) {
   const map = useMap();
 
   useEffect(() => {
-    map.invalidateSize();      // ✅ FIX
+    map.invalidateSize();
     map.flyTo(pos, 16, { duration: 1.5 });
   }, [pos, map]);
 
@@ -36,14 +33,14 @@ function DraggableMarker({ pos, setPos, setAddress, setCity, setPincode }) {
       position={pos}
       draggable
       eventHandlers={{
-        dragend: (e) => {
-          const { lat, lng } = e.target.getLatLng();
+        dragend: (event) => {
+          const { lat, lng } = event.target.getLatLng();
           setPos([lat, lng]);
           fetchAddress(lat, lng, setAddress, setCity, setPincode);
         },
       }}
     >
-      <Popup>Drag me</Popup>
+      <Popup>Drag to adjust location</Popup>
     </Marker>
   );
 }
@@ -56,30 +53,26 @@ async function fetchAddress(lat, lng, setAddress, setCity, setPincode) {
 
     const data = await res.json();
 
-    const fullAddress =
-      `${data.address?.road || ""}, ${data.address?.suburb || ""}, ${data.address?.city || ""}, ${data.address?.state || ""}, ${data.address?.postcode || ""}, ${data.address?.country || ""}`;
+    const fullAddress = `${data.address?.road || ""}, ${data.address?.suburb || ""}, ${
+      data.address?.city || ""
+    }, ${data.address?.state || ""}, ${data.address?.postcode || ""}, ${
+      data.address?.country || ""
+    }`;
 
-    const city =
-      data.address?.city ||
-      data.address?.town ||
-      data.address?.village ||
-      "";
-
+    const city = data.address?.city || data.address?.town || data.address?.village || "";
     const pincode = data.address?.postcode || "";
 
     setAddress(fullAddress);
     setCity(city);
     setPincode(pincode);
-
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
     alert("Failed to fetch address");
   }
 }
 
-export default function Checkout({ cart,setCart, currentUser }) {
+export default function Checkout({ cart, currentUser }) {
   const navigate = useNavigate();
-
   const savedAddress = JSON.parse(
     localStorage.getItem(`address_${currentUser.email}`) || "null"
   );
@@ -92,493 +85,410 @@ export default function Checkout({ cart,setCart, currentUser }) {
   const [fullMap, setFullMap] = useState(false);
 
   useEffect(() => {
-  setTimeout(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, 300);
-}, [fullMap]);
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 300);
+  }, [fullMap]);
 
   useEffect(() => {
-    if (!cart.length) navigate("/cart");
+    if (!cart.length) {
+      navigate("/cart");
+    }
   }, [cart, navigate]);
 
   const totalAmount = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price, 0),
+    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
     [cart]
   );
 
   const getLiveLocation = () => {
-  navigator.geolocation.getCurrentPosition(
-    (geo) => {
-      const { latitude, longitude } = geo.coords;
+    navigator.geolocation.getCurrentPosition(
+      (geo) => {
+        const { latitude, longitude } = geo.coords;
 
-      // ✅ Fullscreen ONLY on mobile
-      if (isMobile()) {
-        setFullMap(true);
-      }
+        if (isMobile()) {
+          setFullMap(true);
+        }
 
-      setPos((currentPos) => {
-        let [startLat, startLng] = currentPos;
-        let steps = 20;
-        let i = 0;
+        setPos((currentPos) => {
+          const [startLat, startLng] = currentPos;
+          const steps = 20;
+          let index = 0;
 
-        const animate = setInterval(() => {
-          i++;
-          const lat = startLat + (latitude - startLat) * (i / steps);
-          const lng = startLng + (longitude - startLng) * (i / steps);
-          setPos([lat, lng]);
+          const animate = window.setInterval(() => {
+            index += 1;
+            const lat = startLat + (latitude - startLat) * (index / steps);
+            const lng = startLng + (longitude - startLng) * (index / steps);
+            setPos([lat, lng]);
 
-          if (i === steps) {
-            clearInterval(animate);
-            fetchAddress(latitude, longitude, setAddress, setCity, setPincode);
-          }
-        }, 20);
+            if (index === steps) {
+              window.clearInterval(animate);
+              fetchAddress(latitude, longitude, setAddress, setCity, setPincode);
+            }
+          }, 20);
 
-        return currentPos;
-      });
-    },
-    () => alert("Location permission denied"),
-    { enableHighAccuracy: true, timeout: 15000 }
-  );
-};
-
-const placeOrder = async () => {
-  // 1️⃣ Save order in DB
-  const { data: orderData, error } = await supabase
-    .from("orders")
-    .insert({
-      user_email: currentUser.email,
-      total: totalAmount,
-      status: "Pending",
-    })
-    .select()
-    .single();
-     console.log("order insert:", orderData, error);
-
-  if (error) {
-    alert("Order failed");
-    return;
+          return currentPos;
+        });
+      },
+      () => alert("Location permission denied"),
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
   };
 
-  const order = orderData;
+  const placeOrderCOD = async () => {
+    if (!address) return alert("Please select address");
 
-  // 2️⃣ Insert order items ✅ MOVED INSIDE ASYNC FUNCTION
-  const items = cart.map((item) => ({
-    order_id: order.id,
-    product_id: item.id,
-    name: item.name,
-    price: item.price,
-    qty: item.qty,
-    image_url: item.image_url,
-  }));
+    const orderPayload = {
+      id: Date.now(),
+      user: currentUser.email,
+      items: cart,
+      total: totalAmount,
+      method: "COD",
+      address,
+      city,
+      pincode,
+      status: "Confirmed",
+      createdAt: new Date().toISOString(),
+    };
 
- await supabase.from("order_items").insert(items);
-
-  // 3️⃣ Generate PDF
-  const doc = new jsPDF();
-  doc.text("Friends Auto Spares - Invoice", 20, 20);
-  doc.text(`Order ID: ${order.id}`, 20, 35);
-  doc.text(`Customer: ${currentUser.email}`, 20, 45);
-  doc.text(`Total: ₹${order.total}`, 20, 55);
-
-  let y = 70;
-  cart.forEach((item) => {
-    doc.text(`${item.name} x ${item.qty} = ₹${item.price * item.qty}`, 20, y);
-    y += 10;
-  });
-
-  const pdfBlob = doc.output("blob");
-
-  // 4️⃣ Upload PDF to Supabase Storage (invoices bucket)
-  const fileName = `invoice-${order.id}.pdf`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("invoices")
-    .upload(fileName, pdfBlob, {
-      contentType: "application/pdf",
-      upsert: true,
+    await fetch("https://friends-auto-backend.onrender.com/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload),
     });
 
-  if (uploadError) {
-    alert("Invoice upload failed");
-    console.error(uploadError);
-    return;
-  }
-
-  // 5️⃣ Get public URL
-  const { data: publicData } = supabase.storage
-    .from("invoices")
-    .getPublicUrl(fileName);
-
-  const invoiceUrl = publicData.publicUrl;
-
- const { error: updateError } = await supabase
-  .from("orders")
-  .update({ invoice_url: invoiceUrl })
-  .eq("id", order.id);
-
-if (updateError) {
-  console.error(updateError);
-  alert("Failed to save invoice URL");
-  return;
-}
-
-console.log("Invoice URL saved:", invoiceUrl);
-};
-
-
-const placeOrderCOD = async () => {
-  if (!address) return alert("Please select address");
-
-  const orderPayload = {
-    id: Date.now(),
-    user: currentUser.email,
-    items: cart,
-    total: totalAmount,
-    method: "COD",
-    address,
-    city,
-    pincode,
-    status: "Confirmed",
-    createdAt: new Date().toISOString(),
-  };
-
-await fetch("https://friends-auto-backend.onrender.com/orders", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(orderPayload),
-  });
-
-  // 1️⃣ Insert order
-  const { data: orderRow, error: insertError } = await supabase
-    .from("orders")
-    .insert({
-      user_email: currentUser.email,
-      total: totalAmount,
-      status: "Confirmed",
-    })
-    .select()
-    .single();
-
- console.log("insertError:", insertError);
-console.log("orderRow:", orderRow);
-
-if (insertError || !orderRow) {
-  alert("Order insert failed. Check console.");
-  return;
-}
-
-  // 2️⃣ Generate PDF
-  const doc = new jsPDF();
-  doc.text("Friends Auto Spares - Invoice", 20, 20);
-  doc.text(`Customer: ${currentUser.email}`, 20, 35);
-  doc.text(`Total: ₹${totalAmount}`, 20, 45);
-
-  let y = 60;
-  cart.forEach((item) => {
-    doc.text(`${item.name} x ${item.qty} = ₹${item.price * item.qty}`, 20, y);
-    y += 10;
-  });
-
-  const pdfBlob = doc.output("blob");
-  const fileName = `invoice-${orderRow.id}.pdf`;
-
-  // 3️⃣ Upload
- const { error: uploadError } = await supabase.storage
-  .from("invoices")
-  .upload(fileName, pdfBlob, {
-    contentType: "application/pdf",
-    upsert: true,
-  });
-
-if (uploadError) {
-  console.error("Invoice upload failed:", uploadError);
-  alert("Invoice upload failed");
-  return;
-}
-
-  // 4️⃣ Get URL
-  const { data: publicData } = supabase.storage
-    .from("invoices")
-    .getPublicUrl(fileName);
-
-  if (!publicData?.publicUrl) {
-    return alert("Failed to get invoice URL");
-  }
-
-  // 5️⃣ Save URL
-  const { error: updateError } = await supabase
-    .from("orders")
-    .update({ invoice_url: publicData.publicUrl })
-    .eq("id", orderRow.id);
-
-  if (updateError) {
-    console.error("Invoice URL save failed:", updateError);
-    return alert("Failed to save invoice URL");
-  }
-
-  console.log("Invoice saved:", publicData.publicUrl);
-
-  localStorage.setItem(
-    `address_${currentUser.email}`,
-    JSON.stringify({ address, city, pincode })
-  );
-
-  navigate("/order-success", {
-    state: { order: orderPayload },
-  });
-};
-
-const payWithRazorpay = async () => {
-  if (!address) return alert("Please select address");
-
-  const [lat,lon] = pos;
-
- const res = await fetch("https://friends-auto-backend.onrender.com/create-order", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ amount: totalAmount }),
-});
-
-const order = await res.json();
-
-  const options = {
-    key: "rzp_test_SHdoRZz35PXXFp",
-    amount: order.amount,
-    currency: "INR",
-    name: "Friends Auto Spares",
-    description: "Bike Parts Order",
-    order_id: order.id,
-
-    handler: async function (response) {
-      const orderpayload = {
-        id: response.razorpay_payment_id,
-        user: currentUser.email,
-        items: cart,
+    const { data: orderRow, error: insertError } = await supabase
+      .from("orders")
+      .insert({
+        user_email: currentUser.email,
         total: totalAmount,
-        method: "ONLINE",
-        paymentId: response.razorpay_payment_id,
-        address,
-        city,
-        pincode,
-        status: "Paid",
-        createdAt: new Date().toISOString(),
-      };
+        status: "Confirmed",
+      })
+      .select()
+      .single();
 
-     await fetch("https://friends-auto-backend.onrender.com/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderpayload),
+    if (insertError || !orderRow) {
+      alert("Order insert failed. Check console.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    doc.text("Friends Auto Spares - Invoice", 20, 20);
+    doc.text(`Customer: ${currentUser.email}`, 20, 35);
+    doc.text(`Total: Rs.${totalAmount}`, 20, 45);
+
+    let y = 60;
+    cart.forEach((item) => {
+      doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
+      y += 10;
+    });
+
+    const pdfBlob = doc.output("blob");
+    const fileName = `invoice-${orderRow.id}.pdf`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("invoices")
+      .upload(fileName, pdfBlob, {
+        contentType: "application/pdf",
+        upsert: true,
       });
 
-      // 1️⃣ Insert order
-const { data: orderRow, error } = await supabase
-  .from("orders")
-  .insert({
-    user_email: currentUser.email,
-    total: totalAmount,
-    status: "Confirmed",
-  })
-  .select()
-  .single();
+    if (uploadError) {
+      console.error("Invoice upload failed:", uploadError);
+      alert("Invoice upload failed");
+      return;
+    }
 
-    if (error) return alert("Order insert failed");
+    const { data: publicData } = supabase.storage.from("invoices").getPublicUrl(fileName);
 
-// 2️⃣ Generate PDF
-const doc = new jsPDF();
-doc.text("Friends Auto Spares - Invoice", 20, 20);
-doc.text(`Customer: ${currentUser.email}`, 20, 35);
-doc.text(`Total: ₹${totalAmount}`, 20, 45);
+    if (!publicData?.publicUrl) {
+      return alert("Failed to get invoice URL");
+    }
 
-let y = 60;
-cart.forEach((item) => {
-  doc.text(`${item.name} x ${item.qty} = ₹${item.price * item.qty}`, 20, y);
-  y += 10;
-});
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({ invoice_url: publicData.publicUrl })
+      .eq("id", orderRow.id);
 
-const pdfBlob = doc.output("blob");
-const fileName = `invoice-${orderRow.id}.pdf`;
-// ...
+    if (updateError) {
+      console.error("Invoice URL save failed:", updateError);
+      return alert("Failed to save invoice URL");
+    }
 
+    localStorage.setItem(
+      `address_${currentUser.email}`,
+      JSON.stringify({ address, city, pincode })
+    );
 
-
-// Upload PDF
-const { error: uploadError } = await supabase.storage
-  .from("invoices")
-  .upload(fileName, pdfBlob, { upsert: true });
-
-if (uploadError) {
-  console.error(uploadError);
-  return alert("Invoice upload failed");
-}
-
-// Get public URL
-const { data: publicData } = supabase.storage
-  .from("invoices")
-  .getPublicUrl(fileName);
-
-if (!publicData?.publicUrl) {
-  return alert("Failed to get invoice URL");
-}
-
-// Save URL in DB
-const { error: updateError } = await supabase
-  .from("orders")
-  .update({ invoice_url: publicData.publicUrl })
-  .eq("id", orderRow.id);
-
-if (updateError) {
-  console.error("UPDATE FAILED:", updateError);
-  alert("Failed to save invoice URL");
-  return;
-}
-
-console.log("invoice url saved in db:", publicData.publicUrl);
-
-      localStorage.setItem(
-        `address_${currentUser.email}`,
-        JSON.stringify({ address, city, pincode })
-      );
-
-      // ✅ Navigate ONLY after successful payment
-      navigate("/order-success", {
-        state: { order: orderpayload },
-      });
-    },
-    prefill: { email: currentUser?.email },
-    theme: { color: "#2563eb" },
+    navigate("/order-success", {
+      state: { order: orderPayload },
+    });
   };
 
-  const rzp = new window.Razorpay(options);
-  rzp.open();
-};
+  const payWithRazorpay = async () => {
+    if (!address) return alert("Please select address");
 
- return (
-  <div className="checkout-container">
+    const res = await fetch("https://friends-auto-backend.onrender.com/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: totalAmount }),
+    });
 
-    {/* LEFT SIDE */}
-    <div className="checkout-card left-card">
+    const order = await res.json();
 
-      <h2 className="checkout-title">📦 Checkout</h2>
+    const options = {
+      key: "rzp_test_SHdoRZz35PXXFp",
+      amount: order.amount,
+      currency: "INR",
+      name: "Friends Auto Spares",
+      description: "Bike Parts Order",
+      order_id: order.id,
+      handler: async function handlePayment(response) {
+        const orderPayload = {
+          id: response.razorpay_payment_id,
+          user: currentUser.email,
+          items: cart,
+          total: totalAmount,
+          method: "ONLINE",
+          paymentId: response.razorpay_payment_id,
+          address,
+          city,
+          pincode,
+          status: "Paid",
+          createdAt: new Date().toISOString(),
+        };
 
-      <textarea
-        placeholder="Full address"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        className="input-large"
-      />
+        await fetch("https://friends-auto-backend.onrender.com/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload),
+        });
 
-      <div className="grid-2">
-        <input
-          placeholder="City"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-        />
-        <input
-          placeholder="Pincode"
-          value={pincode}
-          onChange={(e) => setPincode(e.target.value)}
-        />
-      </div>
+        const { data: orderRow, error } = await supabase
+          .from("orders")
+          .insert({
+            user_email: currentUser.email,
+            total: totalAmount,
+            status: "Confirmed",
+          })
+          .select()
+          .single();
 
-      <button className="location-btn" onClick={getLiveLocation}>
-        📍 Use Live Location
-      </button>
+        if (error) return alert("Order insert failed");
 
-      <div className={fullMap ? "map-fullscreen" : "checkout-map"}>
-        <MapContainer
-          center={pos}
-          zoom={15}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <FlyToLocation pos={pos} />
-          <DraggableMarker
-            pos={pos}
-            setPos={setPos}
-            setAddress={setAddress}
-            setCity={setCity}
-            setPincode={setPincode}
-          />
-        </MapContainer>
+        const doc = new jsPDF();
+        doc.text("Friends Auto Spares - Invoice", 20, 20);
+        doc.text(`Customer: ${currentUser.email}`, 20, 35);
+        doc.text(`Total: Rs.${totalAmount}`, 20, 45);
 
-        <div className="map-actions">
-          {!fullMap && isMobile() && (
-            <button onClick={() => setFullMap(true)}>🗺 Fullscreen</button>
-          )}
-          {fullMap && (
-            <button onClick={() => setFullMap(false)}>❌ Close</button>
-          )}
-        </div>
-      </div>
+        let y = 60;
+        cart.forEach((item) => {
+          doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
+          y += 10;
+        });
 
-      {/* Payment Section */}
-      <div className="payment-toggle">
-<button
-  className={`pay-option ${paymentMethod === "COD" ? "active-pay" : ""}`}
-  onClick={() => {
-    setPaymentMethod("COD");
-    placeOrderCOD();
-  }}
->
-  💵 Cash on Delivery
-</button>
+        const pdfBlob = doc.output("blob");
+        const fileName = `invoice-${orderRow.id}.pdf`;
 
-<button
-  className={`pay-option ${paymentMethod === "ONLINE" ? "active-pay" : ""}`}
-  onClick={() => {
-    setPaymentMethod("ONLINE");
+        const { error: uploadError } = await supabase.storage
+          .from("invoices")
+          .upload(fileName, pdfBlob, { upsert: true });
+
+        if (uploadError) {
+          console.error(uploadError);
+          return alert("Invoice upload failed");
+        }
+
+        const { data: publicData } = supabase.storage
+          .from("invoices")
+          .getPublicUrl(fileName);
+
+        if (!publicData?.publicUrl) {
+          return alert("Failed to get invoice URL");
+        }
+
+        const { error: updateError } = await supabase
+          .from("orders")
+          .update({ invoice_url: publicData.publicUrl })
+          .eq("id", orderRow.id);
+
+        if (updateError) {
+          console.error(updateError);
+          alert("Failed to save invoice URL");
+          return;
+        }
+
+        localStorage.setItem(
+          `address_${currentUser.email}`,
+          JSON.stringify({ address, city, pincode })
+        );
+
+        navigate("/order-success", {
+          state: { order: orderPayload },
+        });
+      },
+      prefill: { email: currentUser?.email },
+      theme: { color: "#2563eb" },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
+
+  const handleCheckoutSubmit = () => {
+    if (paymentMethod === "COD") {
+      placeOrderCOD();
+      return;
+    }
+
     payWithRazorpay();
-  }}
->
-  💳 Razorpay
-</button>
+  };
 
-</div>
+  return (
+    <div className="checkout-page-shell">
+      <section className="checkout-hero-panel">
+        <div>
+          <span className="page-kicker">Checkout</span>
+          <h1>Confirm your address, choose payment, and place your order.</h1>
+          <p>
+            Review delivery details, pin your location, and finish the order in
+            a cleaner checkout flow.
+          </p>
+        </div>
 
+        <div className="checkout-hero-stat">
+          <strong>Rs. {totalAmount}</strong>
+          <span>order total</span>
+        </div>
+      </section>
 
+      <div className="checkout-layout-v2">
+        <section className="checkout-panel-card">
+          <div className="checkout-section-head">
+            <div>
+              <span className="page-kicker">Delivery details</span>
+              <h2>Shipping address</h2>
+            </div>
+          </div>
 
-        <button
-          className="danger-btn"
-          onClick={() => {
-            setAddress("");
-            setCity(""); 
-            setPincode("");
-            localStorage.removeItem(`address_${currentUser.email}`);
-          }}
-        >
-          ❌ Clear Saved Address
-        </button>
+          <textarea
+            placeholder="Full address"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            className="checkout-textarea"
+          />
 
+          <div className="checkout-field-grid">
+            <input
+              placeholder="City"
+              value={city}
+              onChange={(event) => setCity(event.target.value)}
+            />
+            <input
+              placeholder="Pincode"
+              value={pincode}
+              onChange={(event) => setPincode(event.target.value)}
+            />
+          </div>
+
+          <div className="checkout-action-row">
+            <button className="surface-secondary-btn" onClick={getLiveLocation}>
+              Use live location
+            </button>
+            <button
+              className="surface-danger-btn"
+              onClick={() => {
+                setAddress("");
+                setCity("");
+                setPincode("");
+                localStorage.removeItem(`address_${currentUser.email}`);
+              }}
+            >
+              Clear saved address
+            </button>
+          </div>
+
+          <div className={fullMap ? "map-fullscreen" : "checkout-map-shell"}>
+            <MapContainer
+              center={pos}
+              zoom={15}
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <FlyToLocation pos={pos} />
+              <DraggableMarker
+                pos={pos}
+                setPos={setPos}
+                setAddress={setAddress}
+                setCity={setCity}
+                setPincode={setPincode}
+              />
+            </MapContainer>
+
+            <div className="map-actions">
+              {!fullMap && isMobile() ? (
+                <button onClick={() => setFullMap(true)}>Fullscreen</button>
+              ) : null}
+              {fullMap ? <button onClick={() => setFullMap(false)}>Close</button> : null}
+            </div>
+          </div>
+
+          <div className="checkout-section-head">
+            <div>
+              <span className="page-kicker">Payment</span>
+              <h2>Select payment method</h2>
+            </div>
+          </div>
+
+          <div className="checkout-payment-grid">
+            <button
+              className={`checkout-payment-card ${
+                paymentMethod === "COD" ? "active" : ""
+              }`}
+              onClick={() => setPaymentMethod("COD")}
+            >
+              <strong>Cash on Delivery</strong>
+              <span>Pay when the order arrives at your address.</span>
+            </button>
+
+            <button
+              className={`checkout-payment-card ${
+                paymentMethod === "ONLINE" ? "active" : ""
+              }`}
+              onClick={() => setPaymentMethod("ONLINE")}
+            >
+              <strong>Razorpay</strong>
+              <span>Complete payment securely before order confirmation.</span>
+            </button>
+          </div>
+        </section>
+
+        <aside className="checkout-summary-v2">
+          <span className="page-kicker">Order summary</span>
+          <h2>Review your items</h2>
+
+          <div className="checkout-summary-list">
+            {cart.map((item) => (
+              <div key={item.id} className="checkout-summary-row">
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>Qty {item.qty}</span>
+                </div>
+                <strong>Rs. {item.price * item.qty}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div className="checkout-total-box">
+            <span>Total amount</span>
+            <strong>Rs. {totalAmount}</strong>
+          </div>
+
+          <button className="surface-primary-btn" onClick={handleCheckoutSubmit}>
+            {paymentMethod === "COD" ? "Place COD order" : "Pay with Razorpay"}
+          </button>
+        </aside>
       </div>
-  
-
-
-    {/* RIGHT SIDE */}
-<div className="checkout-card summary-card">
-
-  <div className="summary-header">
-    <span className="summary-icon">🧾</span>
-    <h3>Order Summary</h3>
-  </div>
-
-  <div className="summary-items">
-    {cart.map((item) => (
-      <div key={item.id} className="summary-row">
-        <span>{item.name} × {item.qty}</span>
-        <b>₹{item.price * item.qty}</b>
-      </div>
-    ))}
-  </div>
-
-  <div className="summary-divider"></div>
-
-  <div className="summary-total">
-    <span>Total</span>
-    <h2>₹{totalAmount}</h2>
-  </div>
-
-</div>
-
-  </div>
-);
+    </div>
+  );
 }

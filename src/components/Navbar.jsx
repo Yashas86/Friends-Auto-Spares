@@ -1,88 +1,94 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import {useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 export default function Navbar({ user, onLogout, cartCount }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-
   const [scrolled, setScrolled] = useState(false);
 
-useEffect(() => {
-  const handleScroll = () => {
-    setScrolled(window.scrollY > 20);
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 16);
+    };
 
-  window.addEventListener("scroll", handleScroll);
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  const navItems = [
+    { to: "/", label: "Home" },
+    { to: "/shop", label: "Shop" },
+    { to: "/cart", label: "Cart", badge: cartCount },
+    { to: "/profile", label: "Profile" },
+    { to: "/admin", label: "Admin" },
+  ];
 
   return (
-   <div className={`navbar ${scrolled ? "navbar-scrolled" : ""}`}>
-
-      {/* Logo */}
-    <div className="navbar-logo">
-  <img src="/faslogo.png" alt="logo" className="logo-img" />
-  <span className="brand-text">FRIENDS AUTO SPARES</span>
-</div>
-
-      {/* Hamburger */}
-      <div className="hamburger" onClick={() => setOpen(!open)}>
-        ☰
-      </div>
-
-      {/* Links */}
-      <div className={`navbar-links ${open ? "open" : ""}`}>
-
-        <Link
-          to="/"
-          className={`nav-link ${location.pathname === "/" ? "active" : ""}`}
-        >
-          Home
-        </Link>
-
-        <Link
-          to="/shop"
-          className={`nav-link ${location.pathname === "/shop" ? "active" : ""}`}
-        >
-          Shop
-        </Link>
-
-        <Link
-          to="/cart"
-          className={`nav-link cart-link ${location.pathname === "/cart" ? "active" : ""}`}
-        >
-          Cart
-          {cartCount > 0 && (
-            <span className="cart-badge">{cartCount}</span>
-          )}
-        </Link>
-
-        <Link
-          to="/admin"
-          className={`nav-link ${location.pathname === "/admin" ? "active" : ""}`}
-        >
-          Admin
-        </Link>
-
-        <div
-          className="profile-circle"
-          onClick={() => navigate("/profile")}
-        >
-          {(user?.email || user?.name)?.[0]?.toUpperCase() || "U"}
-        </div>
-
-        <button
-          className="logout-btn"
-          onClick={() => {
-            onLogout();
-            navigate("/login");
-          }}
-        >
-          Logout
+    <header className={`site-navbar ${scrolled ? "is-scrolled" : ""}`}>
+      <div className="site-navbar-inner">
+        <button className="site-brand" onClick={() => navigate("/")}>
+          <img src="/faslogo.png" alt="Friends Auto Spares" className="site-brand-logo" />
+          <span className="site-brand-copy">
+            <strong>Friends Auto Spares</strong>
+            <small>Bike parts and service essentials</small>
+          </span>
         </button>
 
+        <button
+          className="site-menu-toggle"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label="Toggle navigation"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav className={`site-nav ${open ? "open" : ""}`}>
+          <div className="site-nav-links">
+            {navItems.map((item) => {
+              const active = location.pathname === item.to;
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`site-nav-link ${active ? "active" : ""}`}
+                >
+                  {item.label}
+                  {item.badge > 0 && <span className="site-nav-badge">{item.badge}</span>}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="site-nav-actions">
+            <button className="site-profile-pill" onClick={() => navigate("/profile")}>
+              <span className="site-profile-avatar">
+                {(user?.email || user?.name)?.[0]?.toUpperCase() || "U"}
+              </span>
+              <span className="site-profile-text">
+                {user?.name || user?.email || "User"}
+              </span>
+            </button>
+
+            <button
+              className="site-logout-btn"
+              onClick={() => {
+                onLogout();
+                navigate("/login");
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        </nav>
       </div>
-    </div>
+    </header>
   );
 }

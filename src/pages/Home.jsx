@@ -339,11 +339,6 @@ export default function Home({ products = [] }) {
         </button>
       </section>
 
-      <footer className="storefront-footer">
-        <span>Copyright 2026 Friends Auto Spares</span>
-        <span>Contact: +91 9449721304</span>
-        <span>Privacy Policy | Terms</span>
-      </footer>
     </div>
   );
 }

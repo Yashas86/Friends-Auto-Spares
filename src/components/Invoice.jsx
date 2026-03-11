@@ -7,86 +7,88 @@ export default function Invoice({ order }) {
   };
 
   return (
-    <>
-      <button
-        onClick={downloadPDF}
-        style={{
-          marginBottom: 20,
-          padding: "10px 18px",
-          borderRadius: 8,
-          border: "none",
-          background: "#2563eb",
-          color: "#fff",
-          cursor: "pointer",
-        }}
-      >
-        📄 Download Invoice PDF
-      </button>
+    <div className="invoice-shell">
+      <div className="invoice-toolbar">
+        <div>
+          <span className="page-kicker">Invoice</span>
+          <h2>Order #{order.id}</h2>
+        </div>
+        <button className="surface-primary-btn" onClick={downloadPDF}>
+          Download PDF
+        </button>
+      </div>
 
-      <div
-        id="invoice"
-        style={{
-          maxWidth: 800,
-          margin: "auto",
-          padding: 24,
-          background: "#fff",
-          border: "1px solid #ddd",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <h2>FRIENDS AUTO SPARES</h2>
-          <h3>INVOICE</h3>
+      <div id="invoice" className="invoice-card">
+        <div className="invoice-header">
+          <div>
+            <h3>Friends Auto Spares</h3>
+            <p>Bike parts and service essentials</p>
+          </div>
+          <div className="invoice-header-meta">
+            <strong>Invoice</strong>
+            <span>{new Date(order.createdAt).toLocaleString()}</span>
+          </div>
         </div>
 
-        <hr />
+        <div className="invoice-meta-grid">
+          <div>
+            <span>Invoice number</span>
+            <strong>#{order.id}</strong>
+          </div>
+          <div>
+            <span>Customer</span>
+            <strong>{order.user}</strong>
+          </div>
+          <div>
+            <span>Payment</span>
+            <strong>{order.method}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>{order.status || "Confirmed"}</strong>
+          </div>
+        </div>
 
-        <p><b>Invoice No:</b> #{order.id}</p>
-        <p><b>Date:</b> {new Date(order.createdAt).toLocaleString()}</p>
-        <p><b>Customer:</b> {order.user}</p>
-        <p><b>Payment:</b> {order.method}</p>
-
-        <hr />
-
-        {/* Table */}
-        <table width="100%" cellPadding="8" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "#2563eb", color: "#fff" }}>
-              <th align="left">Product</th>
-              <th align="center">Qty</th>
-              <th align="right">Price</th>
-              <th align="right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((item, i) => (
-              <tr key={i} style={{ borderBottom: "1px solid #ddd" }}>
-                <td>{item.name}</td>
-                <td align="center">{item.qty || 1}</td>
-                <td align="right">₹{item.price}</td>
-                <td align="right">₹{item.price * (item.qty || 1)}</td>
+        <div className="invoice-table-wrap">
+          <table className="invoice-table">
+            <thead>
+              <tr>
+                <th align="left">Product</th>
+                <th align="center">Qty</th>
+                <th align="right">Price</th>
+                <th align="right">Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Total */}
-        <div style={{ marginTop: 16, borderTop: "2px solid #000", paddingTop: 10 }}>
-          <h3 style={{ textAlign: "right" }}>Grand Total: ₹{order.total}</h3>
+            </thead>
+            <tbody>
+              {order.items.map((item, index) => (
+                <tr key={`${item.name}-${index}`}>
+                  <td>{item.name}</td>
+                  <td align="center">{item.qty || 1}</td>
+                  <td align="right">Rs. {item.price}</td>
+                  <td align="right">Rs. {item.price * (item.qty || 1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        <hr />
+        <div className="invoice-total-row">
+          <span>Grand total</span>
+          <strong>Rs. {order.total}</strong>
+        </div>
 
-        {/* Address */}
-        <h4>Shipping Address</h4>
-        <p>{order.address}</p>
-        <p>{order.city} - {order.pincode}</p>
+        <div className="invoice-address-block">
+          <h4>Shipping address</h4>
+          <p>{order.address}</p>
+          <p>
+            {order.city} - {order.pincode}
+          </p>
+        </div>
 
-        <p style={{ marginTop: 30, fontStyle: "italic" }}>
-          Thank you for shopping with Friends Auto Spares 
+        <p className="invoice-note">
+          Thank you for shopping with Friends Auto Spares.
         </p>
       </div>
-    </>
+    </div>
   );
 }
