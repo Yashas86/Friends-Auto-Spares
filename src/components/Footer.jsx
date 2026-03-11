@@ -22,7 +22,7 @@ export default function Footer() {
         <div className="site-footer-column">
           <span className="site-footer-label">Support</span>
           <a href="tel:+919449721304">+91 9449721304</a>
-          <a href="mailto:friendsautospares@example.com">friendsautospares@example.com</a>
+          <a href="yashaskrishna22@gmail.com">friendsautospares@gmail.com</a>
           <span>Bengaluru, India</span>
         </div>
 
