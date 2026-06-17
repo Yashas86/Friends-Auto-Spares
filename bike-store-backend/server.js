@@ -13,6 +13,8 @@ app.use(express.json());
 
 const ORDERS_FILE = "./orders.json";
 const JWT_SECRET = "super_secret_key_change_this";
+const PORT = Number(process.env.PORT) || 10000;
+const HOST = "0.0.0.0";
 
 // ✅ Replace with your REAL test keys
 const razorpay = new Razorpay({
@@ -147,5 +149,13 @@ app.get("/reverse-geocode", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch address" });
   }
+});
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`Backend running on port ${PORT}`);
 });
 
