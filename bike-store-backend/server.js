@@ -17,9 +17,12 @@ const PORT = Number(process.env.PORT) || 10000;
 const HOST = "0.0.0.0";
 
 // ✅ Replace with your REAL test keys
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "rzp_live_T2Y1TGNYBriIT0";
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "S7vPtZZK0vMLuzGnXpSbIGP1";
+
 const razorpay = new Razorpay({
-  key_id: "rzp_live_T2Y1TGNYBriIT0",
-  key_secret: "S7vPtZZK0vMLuzGnXpSbIGP1",
+  key_id: RAZORPAY_KEY_ID,
+  key_secret: RAZORPAY_KEY_SECRET,
 });
 
 // Fake admin
@@ -119,7 +122,10 @@ app.post("/create-order", async (req, res) => {
       receipt: "receipt_" + Date.now(),
     });
 
-    res.json(order);
+    res.json({
+      ...order,
+      key: RAZORPAY_KEY_ID,
+    });
   } catch (err) {
     console.error("Razorpay Error:", err);
     res.status(500).json({ error: "Razorpay order failed" });

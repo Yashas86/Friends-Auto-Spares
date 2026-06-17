@@ -303,7 +303,7 @@ export default function Checkout({ cart, currentUser }) {
       const order = await res.json();
 
       const options = {
-        key: "rzp_test_SHdoRZz35PXXFp",
+        key: order.key,
         amount: order.amount,
         currency: "INR",
         name: "Friends Auto Spares",
