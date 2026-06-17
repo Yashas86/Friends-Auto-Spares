@@ -16,8 +16,8 @@ const JWT_SECRET = "super_secret_key_change_this";
 
 // ✅ Replace with your REAL test keys
 const razorpay = new Razorpay({
-  key_id: "rzp_test_SHdoRZz35PXXFp",
-  key_secret: "kvfqbWomnqVsY60duf07nShO",
+  key_id: "rzp_live_T2Y1TGNYBriIT0",
+  key_secret: "S7vPtZZK0vMLuzGnXpSbIGP1",
 });
 
 // Fake admin

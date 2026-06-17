@@ -148,6 +148,89 @@ export default function Checkout({ cart, currentUser }) {
     setIsSubmitting(false);
   };
 
+  const buildInvoicePdf = (items, total, customerEmail) => {
+    const doc = new jsPDF();
+    doc.text("Friends Auto Spares - Invoice", 20, 20);
+    doc.text(`Customer: ${customerEmail}`, 20, 35);
+    doc.text(`Total: Rs.${total}`, 20, 45);
+
+    let y = 60;
+    items.forEach((item) => {
+      doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
+      y += 10;
+    });
+
+    return doc.output("blob");
+  };
+
+  const syncOrderToSupabase = async (statusLabel) => {
+    const { data: orderRow, error: insertError } = await supabase
+      .from("orders")
+      .insert({
+        user_email: currentUser.email,
+        total: totalAmount,
+        status: statusLabel,
+      })
+      .select()
+      .single();
+
+    if (insertError || !orderRow) {
+      console.error("Supabase order insert failed:", insertError);
+      return null;
+    }
+
+    const pdfBlob = buildInvoicePdf(cart, totalAmount, currentUser.email);
+    const fileName = `invoice-${orderRow.id}.pdf`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("invoices")
+      .upload(fileName, pdfBlob, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Invoice upload failed:", uploadError);
+      return orderRow;
+    }
+
+    const { data: publicData } = supabase.storage.from("invoices").getPublicUrl(fileName);
+
+    if (!publicData?.publicUrl) {
+      console.error("Invoice public URL generation failed");
+      return orderRow;
+    }
+
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({ invoice_url: publicData.publicUrl })
+      .eq("id", orderRow.id);
+
+    if (updateError) {
+      console.error("Invoice URL save failed:", updateError);
+    }
+
+    return orderRow;
+  };
+
+  const saveLocalOrder = (orderPayload) => {
+    const storageKey = `orders_${currentUser.email}`;
+    const existingOrders = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    localStorage.setItem(storageKey, JSON.stringify([orderPayload, ...existingOrders]));
+  };
+
+  const finalizeSuccessfulOrder = async (orderPayload) => {
+    localStorage.setItem(
+      `address_${currentUser.email}`,
+      JSON.stringify({ address, city, pincode })
+    );
+    saveLocalOrder(orderPayload);
+    resetCheckoutAction();
+    navigate("/order-success", {
+      state: { order: orderPayload },
+    });
+  };
+
   const placeOrderCOD = async () => {
     if (!address) return alert("Please enter or select a delivery address before continuing.");
 
@@ -169,84 +252,23 @@ export default function Checkout({ cart, currentUser }) {
         createdAt: new Date().toISOString(),
       };
 
-      await fetch("https://friends-auto-backend.onrender.com/orders", {
+      const orderResponse = await fetch("https://friends-auto-backend.onrender.com/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload),
       });
 
-      const { data: orderRow, error: insertError } = await supabase
-        .from("orders")
-        .insert({
-          user_email: currentUser.email,
-          total: totalAmount,
-          status: "Confirmed",
-        })
-        .select()
-        .single();
-
-      if (insertError || !orderRow) {
-        alert("We could not create your order at the moment. Please try again.");
-        resetCheckoutAction();
-        return;
+      if (!orderResponse.ok) {
+        throw new Error(`Order save failed with status ${orderResponse.status}`);
       }
 
-      const doc = new jsPDF();
-      doc.text("Friends Auto Spares - Invoice", 20, 20);
-      doc.text(`Customer: ${currentUser.email}`, 20, 35);
-      doc.text(`Total: Rs.${totalAmount}`, 20, 45);
-
-      let y = 60;
-      cart.forEach((item) => {
-        doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
-        y += 10;
-      });
-
-      const pdfBlob = doc.output("blob");
-      const fileName = `invoice-${orderRow.id}.pdf`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("invoices")
-        .upload(fileName, pdfBlob, {
-          contentType: "application/pdf",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error("Invoice upload failed:", uploadError);
-        alert("Your order was created, but the invoice could not be uploaded. Please try again.");
-        resetCheckoutAction();
-        return;
+      try {
+        await syncOrderToSupabase("Confirmed");
+      } catch (syncError) {
+        console.error("Optional order sync failed:", syncError);
       }
 
-      const { data: publicData } = supabase.storage.from("invoices").getPublicUrl(fileName);
-
-      if (!publicData?.publicUrl) {
-        alert("We could not generate the invoice link. Please try again.");
-        resetCheckoutAction();
-        return;
-      }
-
-      const { error: updateError } = await supabase
-        .from("orders")
-        .update({ invoice_url: publicData.publicUrl })
-        .eq("id", orderRow.id);
-
-      if (updateError) {
-        console.error("Invoice URL save failed:", updateError);
-        alert("We could not save the invoice details. Please try again.");
-        resetCheckoutAction();
-        return;
-      }
-
-      localStorage.setItem(
-        `address_${currentUser.email}`,
-        JSON.stringify({ address, city, pincode })
-      );
-
-      navigate("/order-success", {
-        state: { order: orderPayload },
-      });
+      await finalizeSuccessfulOrder(orderPayload);
     } catch (error) {
       console.error(error);
       alert("We could not place your order at the moment. Please try again.");
@@ -274,6 +296,10 @@ export default function Checkout({ cart, currentUser }) {
         body: JSON.stringify({ amount: totalAmount }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Razorpay order creation failed with status ${res.status}`);
+      }
+
       const order = await res.json();
 
       const options = {
@@ -289,97 +315,45 @@ export default function Checkout({ cart, currentUser }) {
           },
         },
         handler: async function handlePayment(response) {
-          const orderPayload = {
-            id: response.razorpay_payment_id,
-            user: currentUser.email,
-            items: cart,
-            total: totalAmount,
-            method: "ONLINE",
-            paymentId: response.razorpay_payment_id,
-            address,
-            city,
-            pincode,
-            status: "Paid",
-            createdAt: new Date().toISOString(),
-          };
-
-          await fetch("https://friends-auto-backend.onrender.com/orders", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(orderPayload),
-          });
-
-          const { data: orderRow, error } = await supabase
-            .from("orders")
-            .insert({
-              user_email: currentUser.email,
+          try {
+            const orderPayload = {
+              id: response.razorpay_payment_id,
+              user: currentUser.email,
+              items: cart,
               total: totalAmount,
-              status: "Confirmed",
-            })
-            .select()
-            .single();
+              method: "ONLINE",
+              paymentId: response.razorpay_payment_id,
+              address,
+              city,
+              pincode,
+              status: "Paid",
+              createdAt: new Date().toISOString(),
+            };
 
-          if (error) {
-            alert("We could not create your order at the moment. Please try again.");
+            const orderResponse = await fetch("https://friends-auto-backend.onrender.com/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(orderPayload),
+            });
+
+            if (!orderResponse.ok) {
+              throw new Error(`Order save failed with status ${orderResponse.status}`);
+            }
+
+            try {
+              await syncOrderToSupabase("Paid");
+            } catch (syncError) {
+              console.error("Optional order sync failed:", syncError);
+            }
+
+            await finalizeSuccessfulOrder(orderPayload);
+          } catch (error) {
+            console.error(error);
+            alert(
+              "Payment was captured, but we could not finish the order confirmation. Please contact support."
+            );
             resetCheckoutAction();
-            return;
           }
-
-          const doc = new jsPDF();
-          doc.text("Friends Auto Spares - Invoice", 20, 20);
-          doc.text(`Customer: ${currentUser.email}`, 20, 35);
-          doc.text(`Total: Rs.${totalAmount}`, 20, 45);
-
-          let y = 60;
-          cart.forEach((item) => {
-            doc.text(`${item.name} x ${item.qty} = Rs.${item.price * item.qty}`, 20, y);
-            y += 10;
-          });
-
-          const pdfBlob = doc.output("blob");
-          const fileName = `invoice-${orderRow.id}.pdf`;
-
-          const { error: uploadError } = await supabase.storage
-            .from("invoices")
-            .upload(fileName, pdfBlob, { upsert: true });
-
-          if (uploadError) {
-            console.error(uploadError);
-            alert("Your order was created, but the invoice could not be uploaded. Please try again.");
-            resetCheckoutAction();
-            return;
-          }
-
-          const { data: publicData } = supabase.storage
-            .from("invoices")
-            .getPublicUrl(fileName);
-
-          if (!publicData?.publicUrl) {
-            alert("We could not generate the invoice link. Please try again.");
-            resetCheckoutAction();
-            return;
-          }
-
-          const { error: updateError } = await supabase
-            .from("orders")
-            .update({ invoice_url: publicData.publicUrl })
-            .eq("id", orderRow.id);
-
-          if (updateError) {
-            console.error(updateError);
-            alert("We could not save the invoice details. Please try again.");
-            resetCheckoutAction();
-            return;
-          }
-
-          localStorage.setItem(
-            `address_${currentUser.email}`,
-            JSON.stringify({ address, city, pincode })
-          );
-
-          navigate("/order-success", {
-            state: { order: orderPayload },
-          });
         },
         prefill: { email: currentUser?.email },
         theme: { color: "#2563eb" },

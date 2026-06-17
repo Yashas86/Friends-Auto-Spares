@@ -8,7 +8,7 @@ import "./App.css";
 
 
 function App() {
-  const [orders, setOrders] = useState([]); // ✅ keep only ONE
+  const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("users");
     return saved ? JSON.parse(saved) : [];
@@ -167,6 +167,11 @@ const [products, setProducts] = useState(() => {
     if (currentUser?.email) {
       const saved = localStorage.getItem(`cart_${currentUser.email}`);
       setCart(saved ? JSON.parse(saved) : []);
+
+      const savedOrders = localStorage.getItem(`orders_${currentUser.email}`);
+      setOrders(savedOrders ? JSON.parse(savedOrders) : []);
+    } else {
+      setOrders([]);
     }
   }, [currentUser]);
 
