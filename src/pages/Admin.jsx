@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase";
 
 const emptyForm = {
@@ -45,16 +45,16 @@ export default function Admin({ products = [], setProducts, orders, setOrders })
     });
   }, [products, search, categoryFilter]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     const { data } = await supabase
       .from("orders")
       .select("*, order_items(*)")
       .order("created_at", { ascending: false });
 
     setOrders(data || []);
-  };
+  }, [setOrders]);
 
-  const fetchProductsFromDB = async () => {
+  const fetchProductsFromDB = useCallback(async () => {
     const { data } = await supabase
       .from("products")
       .select("*")
@@ -62,14 +62,14 @@ export default function Admin({ products = [], setProducts, orders, setOrders })
       .order("created_at", { ascending: false });
 
     setProducts(data || []);
-  };
+  }, [setProducts]);
 
   useEffect(() => {
     if (token) {
       fetchOrders();
       fetchProductsFromDB();
     }
-  }, [token]);
+  }, [token, fetchOrders, fetchProductsFromDB]);
 
   const login = async () => {
     const res = await fetch("https://friends-auto-backend.onrender.com/admin/login", {
