@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+bike-store-backend/node_modules/
 
 # testing
 /coverage
@@ -11,13 +12,27 @@
 # production
 /build
 
+# environment files and secrets
+.env
+.env.*
+*.env
+!.env.example
+bike-store-backend/.env
+bike-store-backend/.env.*
+bike-store-backend/*.env
+!bike-store-backend/.env.example
+
+# backend persistent customer data
+bike-store-backend/orders.json
+orders.json
+
 # misc
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+*.lnk
+Thumbs.db
 
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+node_modules/

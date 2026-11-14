@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Checkout from "./pages/Checkout";
+import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./AppRoutes";
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
@@ -118,8 +117,6 @@ const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem(`cart_${currentUser?.email}`);
     return saved ? JSON.parse(saved) : [];
   });
-
-  const [vehicle, setVehicle] = useState(null);
 
   // 🔐 Local Auth (demo)
   const signup = () => {
